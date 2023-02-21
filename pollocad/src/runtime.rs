@@ -1,14 +1,47 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+
+use fxhash::FxBuildHasher;
 use threadpool::ThreadPool;
 
 use crate::ast::*;
 use crate::geometry::Solid;
 
-pub struct FuncArgs {
-    pub pos: Vec<Value>,
-    pub named: BTreeMap<String, Value>,
-    pub children: Vec<Value>,
+type Result = std::result::Result<Value, Error>;
+
+struct CacheEntry {
+    used: bool,
+    value: Value,
+}
+
+pub struct Runtime {
+    pool: ThreadPool,
+    cache: RwLock<HashMap<usize, CacheEntry, FxBuildHasher>>,
+}
+
+impl Runtime {
+    fn new() -> Runtime {
+        Runtime {
+            pool: ThreadPool::new(8),
+            cache: RwLock::new(HashMap::with_hasher(FxBuildHasher::default())),
+        }
+    }
+
+    /*pub fn exec(nodes: &[Arc<Node>]) -> Result {
+    }*/
+}
+
+pub struct CallCtx<'a> {
+    pub pos: &'a[Value],
+    pub named: &'a HashMap<String, Value>,
+    pub children: &'a[Value],
+    pub is_heavy: bool,
+}
+
+impl CallCtx<'_> {
+    fn heavy(&mut self) {
+        self.is_heavy = true;
+    }
 }
 
 pub trait BuiltinFunc {
@@ -16,7 +49,7 @@ pub trait BuiltinFunc {
         false
     }
 
-    fn call(&self, args: &FuncArgs) -> std::result::Result<Value, String>;
+    fn call(&self, args: &mut CallCtx) -> std::result::Result<Value, String>;
 }
 
 #[derive(Clone, Debug)]
@@ -24,8 +57,6 @@ pub struct Error {
     node: Arc<Node>,
     reason: String,
 }
-
-type Result = std::result::Result<Value, Error>;
 
 fn err(node: &Arc<Node>, reason: impl Into<String>) -> Error {
     Error {
@@ -42,32 +73,14 @@ pub enum Value {
     Solid(Arc<Solid>),
 }
 
-struct CacheEntry {
-    value: Value,
-}
-
-pub struct Executor {
-    pool: ThreadPool,
-    cache: RwLock<BTreeMap<usize, Arc<CacheEntry>>>,
-}
-
-impl Executor {
-    fn new() -> Executor {
-        Executor {
-            pool: ThreadPool::new(8),
-            cache: RwLock::new(BTreeMap::new()),
-        }
-    }
-}
-
 struct Env {
-    executor: Arc<Executor>,
+    executor: Arc<Runtime>,
     parent: Option<Arc<Env>>,
-    vars: BTreeMap<String, Value>,
+    vars: HashMap<String, Value>,
 }
 
 impl Env {
-    fn new(executor: Arc<Executor>) -> Self {
+    fn new(executor: Arc<Runtime>) -> Self {
         Env {
             executor,
             parent: None,
@@ -82,7 +95,7 @@ impl Env {
             .or_else(|| self.parent.as_ref().and_then(|p| p.get(name)))
     }
 
-    fn child(self: &Arc<Env>, vars: BTreeMap<String, Value>) -> Arc<Env> {
+    fn child(self: &Arc<Env>, vars: HashMap<String, Value>) -> Arc<Env> {
         Arc::new(Env {
             executor: self.executor.clone(),
             parent: Some(self.clone()),
@@ -126,7 +139,7 @@ fn is_node_heavy(env: &Env, node: &Node) -> bool {
 fn exec_expr(env: Arc<Env>, node: &Arc<Node>) -> Result {
     match &node.expr {
         Expr::Let(let_) => {
-            let mut var = BTreeMap::new();
+            let mut var = HashMap::new();
             var.insert(let_.name.clone(), exec_expr(env.clone(), &let_.value)?);
 
             exec_body(env.child(var), let_.body.as_ref())
@@ -142,27 +155,34 @@ fn exec_expr(env: Arc<Env>, node: &Arc<Node>) -> Result {
 
             let Value::BuiltinFunc(func) = func else { return Err(err(node, "")) };
 
-            let args = FuncArgs {
-                pos: call
-                    .pos_args
-                    .iter()
-                    .map(|expr| exec_expr(env.clone(), expr))
-                    .collect::<std::result::Result<Vec<_>, _>>()?,
+            let pos_args = call
+                .args
+                .iter()
+                .filter_map(|(name, expr)| name.as_ref().map_or_else(|| Some(expr), |_| None))
+                .map(|expr| exec_expr(env.clone(), &expr))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
 
-                named: call
-                    .named_args
-                    .iter()
-                    .map(|(name, expr)| exec_expr(env.clone(), expr).map(|val| (name.clone(), val)))
-                    .collect::<std::result::Result<BTreeMap<_, _>, _>>()?,
+            let named_args =call
+                .args
+                .iter()
+                .filter_map(|(name, expr)| name.as_ref().map(|name| (name, expr)))
+                .map(|(name, expr)| exec_expr(env.clone(), expr).map(|val| (name.clone(), val)))
+                .collect::<std::result::Result<HashMap<_, _>, _>>()?;
 
-                children: call
-                    .body
-                    .iter()
-                    .map(|expr| exec_expr(env.clone(), expr))
-                    .collect::<std::result::Result<Vec<_>, _>>()?,
+            let children = call
+                .body
+                .iter()
+                .map(|expr| exec_expr(env.clone(), expr))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+
+            let mut args = CallCtx {
+                pos: &pos_args,
+                named: &named_args,
+                children: &children,
+                is_heavy: false,
             };
 
-            func.call(&args).map_err(|e| err(node, e))
+            func.call(&mut args).map_err(|e| err(node, e))
         }
         Expr::Return(node) => exec_expr(env, node),
     }
@@ -201,7 +221,7 @@ fn exec_body(env: Arc<Env>, nodes: &[Arc<Node>]) -> Result {
 }
 
 pub fn exec(nodes: &[Arc<Node>]) -> Result {
-    let env = Arc::new(Env::new(Arc::new(Executor::new())));
+    let env = Arc::new(Env::new(Arc::new(Runtime::new())));
 
     exec_body(
         env.child(crate::builtins::get_builtins()),
@@ -209,8 +229,7 @@ pub fn exec(nodes: &[Arc<Node>]) -> Result {
             pos: 0..0,
             expr: Expr::Call(CallExpr {
                 name: "union".to_string(),
-                pos_args: Vec::new(),
-                named_args: BTreeMap::new(),
+                args: Vec::new(),
                 body: nodes.to_vec(),
             }),
         })],

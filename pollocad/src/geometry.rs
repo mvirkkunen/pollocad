@@ -11,14 +11,22 @@ struct SolidItem {
 }
 
 impl SolidItem {
-    fn xformed_nef(&self) -> Cow<Nef3> {
-        self.xform
-            .map(|x| {
+    fn xformed_nef(&self) -> Result<Cow<Nef3>, String> {
+        match self.xform {
+            Some(xform) => {
                 let mut clone = (*self.nef).clone();
-                clone.transform(x.as_ref());
+                clone.transform(xform.as_ref())?;
+                Ok(Cow::Owned(clone))
+            },
+            None => Ok(Cow::Borrowed(&*self.nef)),
+        }
+        /*self.xform
+            .and_then(|x| {
+                let mut clone = (*self.nef).clone();
+                clone.transform(x.as_ref())?;
                 Cow::Owned(clone)
-            })
-            .unwrap_or_else(|| Cow::Borrowed(&*self.nef))
+            })?
+            .unwrap_or_else(|| Cow::Borrowed(&*self.nef))*/
     }
 }
 
@@ -68,15 +76,15 @@ impl Solid {
 
         let mut acc = (*first.nef).clone();
         if let Some(x) = &first.xform {
-            acc.transform(x.as_ref());
+            acc.transform(x.as_ref())?;
         }
 
         for item in real.iter().skip(1) {
-            acc.union_with(&item.xformed_nef())?;
+            acc.union_with(item.xformed_nef()?.as_ref())?;
         }
 
         for item in anti {
-            acc.difference_with(&item.xformed_nef())?;
+            acc.difference_with(item.xformed_nef()?.as_ref())?;
         }
 
         Ok(Solid(vec![SolidItem {

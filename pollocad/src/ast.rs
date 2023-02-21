@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -35,8 +34,8 @@ pub struct LetExpr {
 #[derive(PartialEq, Clone, Debug)]
 pub struct CallExpr {
     pub name: String,
-    pub pos_args: Vec<Arc<Node>>,
-    pub named_args: BTreeMap<String, Arc<Node>>,
+    //pub pos_args: Vec<Arc<Node>>,
+    pub args: Vec<(Option<String>, Arc<Node>)>,
     pub body: Vec<Arc<Node>>,
 }
 

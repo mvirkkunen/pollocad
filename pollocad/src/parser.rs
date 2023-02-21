@@ -13,8 +13,7 @@ use nom::{
 };
 use nom_locate::{position, LocatedSpan};
 
-use std::collections::BTreeMap;
-use std::ops::Range;
+use std::{ops::Range, collections::HashSet};
 use std::sync::Arc;
 
 use crate::ast::*;
@@ -109,11 +108,6 @@ fn expr_parens(i: Span) -> Result<Arc<Node>> {
 }*/
 
 fn expr_call(i: Span) -> Result<Arc<Node>> {
-    enum Arg {
-        Pos(Arc<Node>),
-        Named(String, Arc<Node>),
-    }
-
     alt((
         map(
             pos(tuple((
@@ -127,28 +121,25 @@ fn expr_call(i: Span) -> Result<Arc<Node>> {
                                 alt((
                                     map(
                                         pair(tws(ident), preceded(tws(char('=')), expr)),
-                                        |(name, value)| Arg::Named(name.to_string(), value),
+                                        |(name, value)| (Some(name.to_string()), value),
                                     ),
-                                    map(expr, |expr| Arg::Pos(expr)),
+                                    map(expr, |expr| (None, expr)),
                                 )),
                             ),
                             opt(tws(tag(","))),
                         ),
                         |args| {
-                            let mut pos_args: Vec<Arc<Node>> = Default::default();
-                            let mut named_args: BTreeMap<String, Arc<Node>> = Default::default();
+                            let mut named: HashSet<&str> = HashSet::new();
 
-                            for a in args {
+                            for a in &args {
                                 match a {
-                                    Arg::Pos(value) => {
-                                        if !named_args.is_empty() {
+                                    (None, _) => {
+                                        if !named.is_empty() {
                                             return Err(String::from("positional arguments must come before named arguments"));
                                         }
-
-                                        pos_args.push(value);
-                                    }
-                                    Arg::Named(name, value) => {
-                                        if named_args.insert(name.clone(), value).is_some() {
+                                    },
+                                    (Some(name), _) => {
+                                        if !named.insert(name.as_str()) {
                                             return Err(format!(
                                                 "duplicate named argument: {}",
                                                 name
@@ -158,21 +149,20 @@ fn expr_call(i: Span) -> Result<Arc<Node>> {
                                 }
                             }
 
-                            Ok((pos_args, named_args))
-                        },
+                            Ok(args)
+                        }
                     )),
                     tws(tag(")")),
                 ),
                 alt((map(expr_call, |child| vec![child]), block, success(vec![]))),
             ))),
-            |(pos, (name, (pos_args, named_args), body))| {
+            |(pos, (name, args, body))| {
                 node(
                     pos,
                     Expr::Call(CallExpr {
                         name: name.to_string(),
                         body,
-                        pos_args,
-                        named_args,
+                        args,
                     }),
                 )
             },
@@ -201,8 +191,7 @@ fn binop<'a>(
                 }),*/
                 Expr::Call(CallExpr {
                     name: op.to_string(),
-                    pos_args: vec![prev, expr],
-                    named_args: Default::default(),
+                    args: vec![(None, prev), (None, expr)],
                     body: vec![],
                 }),
             )
@@ -291,7 +280,7 @@ pub fn parse_source(i: &str) -> Result<Vec<Arc<Node>>> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    //use super::*;
 
     /*fn check(code: &str, result: Vec<Arc<Node>>) {
         match parse_source(code) {

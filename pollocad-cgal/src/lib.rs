@@ -33,10 +33,8 @@ impl Nef3 {
         unsafe { protect(|err| bind::nef3_new_cube(x, y, z, err)).map(Nef3) }
     }
 
-    pub fn transform(&mut self, matrix: &[f64; 16]) {
-        unsafe {
-            protect(|err| bind::nef3_transform(self.0, matrix.as_ptr(), err));
-        }
+    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), String> {
+        unsafe { protect(|err| bind::nef3_transform(self.0, matrix.as_ptr(), err)) }
     }
 
     pub fn union_with(&mut self, other: &Nef3) -> Result<(), String> {

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 fn main() {
     cc::Build::new()
         .cpp(true)
+        .flag("-std=c++14") // add this
         .include("cpp/")
         .file("cpp/wrapper.cpp")
         .compile("pollocad_cgal");

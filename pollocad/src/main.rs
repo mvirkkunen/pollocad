@@ -14,7 +14,7 @@ use eframe::{
 
 mod ast;
 mod builtins;
-mod exec;
+mod runtime;
 mod geometry;
 mod parser;
 
@@ -331,8 +331,8 @@ impl eframe::App for MyApp {
                     if response.changed() || !self.valid {
                         self.valid = true;
                         match parser::parse_source(&self.code) {
-                            Ok((_, body)) => match exec::exec(body.as_ref()) {
-                                Ok(exec::Value::Solid(geo)) => {
+                            Ok((_, body)) => match runtime::exec(body.as_ref()) {
+                                Ok(runtime::Value::Solid(geo)) => {
                                     if let Ok(m) = geo.to_mesh_data() {
                                         mesh_data = m;
 
