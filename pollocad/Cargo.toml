@@ -1,0 +1,19 @@
+[package]
+name = "pollocad"
+version = "0.1.0"
+authors = ["Matti Virkkunen <matti@virkkunen.net>"]
+edition = "2021"
+
+[dependencies]
+pollocad-cgal = { path = "../pollocad-cgal" }
+
+bytemuck = "1.13"
+cgmath = "0.18"
+eframe = { version = "0.21", features = ["wgpu"] }
+#egui-wgpu = "0.21"
+fxhash = "0.2"
+nom = "7.1"
+nom_locate = "4.1"
+threadpool = "1.8"
+#three-d = { version = "0.14", default-features = false }
+#three-d = { git = "https://github.com/asny/three-d.git", ref = "0b840245968414d8179c8b33f298363e799a613a" }

@@ -1,0 +1,9 @@
+[package]
+name = "pollocad-cgal"
+version = "0.1.0"
+edition = "2021"
+links = "pollocad_cgal"
+
+[build-dependencies]
+bindgen = "0.64"
+cc = "1.0"
