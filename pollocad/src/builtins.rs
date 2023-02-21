@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::ops::*;
 use std::sync::Arc;
 
-use crate::runtime::*;
 use crate::geometry::*;
+use crate::runtime::*;
 
 struct Cube;
 

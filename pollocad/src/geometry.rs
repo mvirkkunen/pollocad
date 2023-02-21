@@ -17,16 +17,9 @@ impl SolidItem {
                 let mut clone = (*self.nef).clone();
                 clone.transform(xform.as_ref())?;
                 Ok(Cow::Owned(clone))
-            },
+            }
             None => Ok(Cow::Borrowed(&*self.nef)),
         }
-        /*self.xform
-            .and_then(|x| {
-                let mut clone = (*self.nef).clone();
-                clone.transform(x.as_ref())?;
-                Cow::Owned(clone)
-            })?
-            .unwrap_or_else(|| Cow::Borrowed(&*self.nef))*/
     }
 }
 
@@ -93,46 +86,6 @@ impl Solid {
             anti: false,
         }]))
     }
-
-    /*pub fn unionize<'a>(solids: impl Iterator<Item = &'a Solid>) -> Result<Solid, String> {
-        let (anti, real): (Vec<_>, Vec<_>) = solids.flat_map(|s| s.0.iter()).partition(|i| i.anti);
-
-        let Some(first) = real.first() else {
-            return Ok(Solid(vec![]));
-        };
-
-        let mut acc = (*first.nef).clone();
-
-        for item in real {
-            let mut nef = Cow::Borrowed(&*item.nef);
-
-            if let Some(xform) = &item.xform {
-                let clone = (*nef).clone();
-                clone.transform(xform.as_ref());
-                nef = Cow::Owned(clone);
-            }
-
-            acc.union_with(&nef)?;
-        }
-
-        for item in anti {
-            let mut nef = Cow::Borrowed(&*item.nef);
-
-            if let Some(xform) = &item.xform {
-                let clone = (*nef).clone();
-                clone.transform(xform.as_ref());
-                nef = Cow::Owned(clone);
-            }
-
-            acc.difference_with(&nef)?;
-        }
-
-        Ok(Solid(vec![SolidItem {
-            xform: None,
-            nef: Arc::new(acc),
-            anti: false,
-        }]))
-    }*/
 
     pub fn combine<'a>(solids: impl Iterator<Item = &'a Solid>) -> Solid {
         Solid(solids.flat_map(|s| s.0.iter().cloned()).collect())

@@ -32,9 +32,9 @@ impl Runtime {
 }
 
 pub struct CallCtx<'a> {
-    pub pos: &'a[Value],
+    pub pos: &'a [Value],
     pub named: &'a HashMap<String, Value>,
-    pub children: &'a[Value],
+    pub children: &'a [Value],
     pub is_heavy: bool,
 }
 
@@ -162,7 +162,7 @@ fn exec_expr(env: Arc<Env>, node: &Arc<Node>) -> Result {
                 .map(|expr| exec_expr(env.clone(), &expr))
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 
-            let named_args =call
+            let named_args = call
                 .args
                 .iter()
                 .filter_map(|(name, expr)| name.as_ref().map(|name| (name, expr)))

@@ -13,8 +13,8 @@ use nom::{
 };
 use nom_locate::{position, LocatedSpan};
 
-use std::{ops::Range, collections::HashSet};
 use std::sync::Arc;
+use std::{collections::HashSet, ops::Range};
 
 use crate::ast::*;
 
@@ -137,7 +137,7 @@ fn expr_call(i: Span) -> Result<Arc<Node>> {
                                         if !named.is_empty() {
                                             return Err(String::from("positional arguments must come before named arguments"));
                                         }
-                                    },
+                                    }
                                     (Some(name), _) => {
                                         if !named.insert(name.as_str()) {
                                             return Err(format!(
@@ -150,7 +150,7 @@ fn expr_call(i: Span) -> Result<Arc<Node>> {
                             }
 
                             Ok(args)
-                        }
+                        },
                     )),
                     tws(tag(")")),
                 ),
@@ -214,29 +214,28 @@ fn expr(i: Span) -> Result<Arc<Node>> {
 fn block_body(i: Span) -> Result<Vec<Arc<Node>>> {
     map(
         pair(
-            many0(
-                alt((
-                    terminated(
-                        alt((
-                            map(
-                                pos(pair(tws(ident), preceded(tws(char('=')), cut(expr)))),
-                                |(pos, (name, value))| {
-                                    node(
-                                        pos,
-                                        Expr::Let(LetExpr {
-                                            name: name.to_string(),
-                                            value,
-                                            body: vec![],
-                                        }),
-                                    )
-                                },
-                            ),
-                            expr,
-                        )),
-                        many1(tws(tag(";")))),
-                    expr_call
-                ))
-            ),
+            many0(alt((
+                terminated(
+                    alt((
+                        map(
+                            pos(pair(tws(ident), preceded(tws(char('=')), cut(expr)))),
+                            |(pos, (name, value))| {
+                                node(
+                                    pos,
+                                    Expr::Let(LetExpr {
+                                        name: name.to_string(),
+                                        value,
+                                        body: vec![],
+                                    }),
+                                )
+                            },
+                        ),
+                        expr,
+                    )),
+                    many1(tws(tag(";"))),
+                ),
+                expr_call,
+            ))),
             opt(expr),
         ),
         |(mut nodes, ret): (Vec<Arc<Node>>, Option<Arc<Node>>)| {
