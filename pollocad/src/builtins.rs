@@ -4,42 +4,74 @@ use std::sync::Arc;
 
 use crate::geometry::*;
 use crate::runtime::*;
-
-struct Cube;
-
 const EPSILON: f64 = 0.001;
 
+trait MapHelpers {
+    fn add_func(&mut self, name: &str, func: impl BuiltinFunc + 'static);
+}
+
+impl MapHelpers for HashMap<String, Value> {
+    fn add_func(&mut self, name: &str, func: impl BuiltinFunc + 'static) {
+        self.insert(name.to_string(), Value::BuiltinFunc(Arc::new(func)));
+    }
+}
+
+struct Cube;
 impl BuiltinFunc for Cube {
     fn is_heavy(&self) -> bool {
         true
     }
 
     fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
-        let mut sx = 1.0;
-        let mut sy = 1.0;
-        let mut sz = 1.0;
+        let sx = c
+            .named_num("x")?
+            .or(c.pos_num(0, "x")?)
+            .unwrap_or(1.0)
+            .max(EPSILON);
+        let sy = c
+            .named_num("y")?
+            .or(c.pos_num(1, "x")?)
+            .unwrap_or(1.0)
+            .max(EPSILON);
+        let sz = c
+            .named_num("z")?
+            .or(c.pos_num(2, "x")?)
+            .unwrap_or(1.0)
+            .max(EPSILON);
 
-        if let Some(Value::Num(x)) = c.pos.get(0) {
-            sx = x.max(EPSILON);
-        }
-
-        if let Some(Value::Num(y)) = c.pos.get(1) {
-            sy = y.max(EPSILON);
-        }
-
-        if let Some(Value::Num(z)) = c.pos.get(2) {
-            sz = z.max(EPSILON);
-        }
-
-        Ok(Value::Solid(Arc::new(Solid::cube(sx, sy, sz)?)))
+        Ok(Value::Solid(Arc::new(Solid::cube(
+            sx.max(EPSILON),
+            sy.max(EPSILON),
+            sz.max(EPSILON),
+        )?)))
     }
 }
 
-fn map_solid(
-    args: &CallCtx,
-    f: impl FnOnce(Solid) -> Result<Solid, String>,
-) -> Result<Value, String> {
-    args.children
+struct Cylinder;
+impl BuiltinFunc for Cylinder {
+    fn is_heavy(&self) -> bool {
+        true
+    }
+
+    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+        let d = c.named_num("d")?;
+        let r = c.named_num("r")?;
+        if d.is_some() && r.is_some() {
+            return Err(String::from(
+                "Cannot specify both diameter and radius for cylinder",
+            ));
+        }
+        let r = r.or(d.map(|d| d * 0.5)).unwrap_or(1.0).max(EPSILON);
+
+        let h = c.named_num("h")?.unwrap_or(1.0).max(EPSILON);
+        let fn_ = c.named_num("$fn")?.unwrap_or(10.0).max(3.0).round() as u32;
+
+        Ok(Value::Solid(Arc::new(Solid::cylinder(r, h, fn_)?)))
+    }
+}
+
+fn map_solid(c: &CallCtx, f: impl FnOnce(Solid) -> Result<Solid, String>) -> Result<Value, String> {
+    c.children
         .iter()
         .map(|c| match c {
             Value::Solid(s) => Ok(s.as_ref()),
@@ -52,7 +84,6 @@ fn map_solid(
 }
 
 struct Union;
-
 impl BuiltinFunc for Union {
     fn is_heavy(&self) -> bool {
         true
@@ -63,8 +94,29 @@ impl BuiltinFunc for Union {
     }
 }
 
-struct Anti;
+struct Intersection;
+impl BuiltinFunc for Intersection {
+    fn is_heavy(&self) -> bool {
+        true
+    }
 
+    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+        let children = c
+            .children
+            .iter()
+            .map(|c| match c {
+                Value::Solid(s) => Ok(s.as_ref()),
+                _ => Err("Combinators may only have solid values as children".to_string()),
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+
+        Ok(Value::Solid(Arc::new(Solid::intersectionize(
+            children.into_iter(),
+        )?)))
+    }
+}
+
+struct Anti;
 impl BuiltinFunc for Anti {
     fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
         map_solid(c, |s| Ok(s.anti()))
@@ -72,7 +124,6 @@ impl BuiltinFunc for Anti {
 }
 
 struct Translate;
-
 impl BuiltinFunc for Translate {
     fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
         let mut coord: [f64; 3] = [0.0, 0.0, 0.0];
@@ -101,7 +152,6 @@ impl BuiltinFunc for Translate {
 }
 
 struct NumOp(fn(a: f64, b: f64) -> f64);
-
 impl BuiltinFunc for NumOp {
     fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
         assert!(c.pos.len() == 2);
@@ -113,20 +163,12 @@ impl BuiltinFunc for NumOp {
     }
 }
 
-trait AddFunc {
-    fn add_func(&mut self, name: &str, func: impl BuiltinFunc + 'static);
-}
-
-impl AddFunc for HashMap<String, Value> {
-    fn add_func(&mut self, name: &str, func: impl BuiltinFunc + 'static) {
-        self.insert(name.to_string(), Value::BuiltinFunc(Arc::new(func)));
-    }
-}
-
 pub fn get_builtins() -> HashMap<String, Value> {
     let mut builtins = HashMap::new();
     builtins.add_func("cube", Cube);
+    builtins.add_func("cylinder", Cylinder);
     builtins.add_func("union", Union);
+    builtins.add_func("intersection", Intersection);
     builtins.add_func("anti", Anti);
     builtins.add_func("translate", Translate);
     builtins.add_func("+", NumOp(f64::add));

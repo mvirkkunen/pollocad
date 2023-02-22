@@ -6,19 +6,19 @@ use std::sync::Arc;
 #[derive(Clone)]
 struct SolidItem {
     xform: Option<cgmath::Matrix4<f64>>,
-    nef: Arc<Nef3>,
+    mesh: Arc<Mesh3>,
     anti: bool,
 }
 
 impl SolidItem {
-    fn xformed_nef(&self) -> Result<Cow<Nef3>, String> {
+    fn xformed_mesh(&self) -> Result<Cow<Mesh3>, String> {
         match self.xform {
             Some(xform) => {
-                let mut clone = (*self.nef).clone();
+                let mut clone = (*self.mesh).clone();
                 clone.transform(xform.as_ref())?;
                 Ok(Cow::Owned(clone))
             }
-            None => Ok(Cow::Borrowed(&*self.nef)),
+            None => Ok(Cow::Borrowed(&*self.mesh)),
         }
     }
 }
@@ -26,12 +26,20 @@ impl SolidItem {
 pub struct Solid(Vec<SolidItem>);
 
 impl Solid {
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Solid, String> {
-        Ok(Solid(vec![SolidItem {
+    fn primitive(mesh: Mesh3) -> Solid {
+        Solid(vec![SolidItem {
             xform: None,
-            nef: Arc::new(Nef3::cube(x, y, z)?),
+            mesh: Arc::new(mesh),
             anti: false,
-        }]))
+        }])
+    }
+
+    pub fn cube(x: f64, y: f64, z: f64) -> Result<Solid, String> {
+        Ok(Mesh3::cube(x, y, z)?.into())
+    }
+
+    pub fn cylinder(r: f64, h: f64, fn_: u32) -> Result<Solid, String> {
+        Ok(Mesh3::cylinder(r, h, fn_)?.into())
     }
 
     pub fn anti(&self) -> Solid {
@@ -40,7 +48,7 @@ impl Solid {
                 .iter()
                 .map(|i| SolidItem {
                     xform: i.xform,
-                    nef: i.nef.clone(),
+                    mesh: i.mesh.clone(),
                     anti: !i.anti,
                 })
                 .collect(),
@@ -53,7 +61,7 @@ impl Solid {
                 .iter()
                 .map(|i| SolidItem {
                     xform: Some(mat * i.xform.unwrap_or_else(|| cgmath::Matrix4::identity())),
-                    nef: i.nef.clone(),
+                    mesh: i.mesh.clone(),
                     anti: i.anti,
                 })
                 .collect(),
@@ -67,22 +75,44 @@ impl Solid {
             return Ok(Solid(vec![]));
         };
 
-        let mut acc = (*first.nef).clone();
+        let mut acc = (*first.mesh).clone();
         if let Some(x) = &first.xform {
             acc.transform(x.as_ref())?;
         }
 
         for item in real.iter().skip(1) {
-            acc.union_with(item.xformed_nef()?.as_ref())?;
+            acc.boolean_op_with(item.xformed_mesh()?.as_ref(), BooleanOp::Union)?;
         }
 
         for item in anti {
-            acc.difference_with(item.xformed_nef()?.as_ref())?;
+            acc.boolean_op_with(item.xformed_mesh()?.as_ref(), BooleanOp::Difference)?;
         }
 
         Ok(Solid(vec![SolidItem {
             xform: None,
-            nef: Arc::new(acc),
+            mesh: Arc::new(acc),
+            anti: false,
+        }]))
+    }
+
+    pub fn intersectionize<'a>(solids: impl Iterator<Item = &'a Solid>) -> Result<Solid, String> {
+        let items = solids
+            .map(|s| Ok(s.unionize()?.0[0].mesh.clone()))
+            .collect::<Result<Vec<_>, String>>()?;
+
+        let Some(first) = items.first() else {
+            return Ok(Solid(vec![]));
+        };
+
+        let mut acc = (**first).clone();
+
+        for s in items.iter().skip(1) {
+            acc.boolean_op_with(s, BooleanOp::Intersection)?;
+        }
+
+        Ok(Solid(vec![SolidItem {
+            xform: None,
+            mesh: Arc::new(acc),
             anti: false,
         }]))
     }
@@ -92,7 +122,17 @@ impl Solid {
     }
 
     pub fn to_mesh_data(&self) -> Result<Option<MeshData>, String> {
-        self.0.get(0).map(|n| n.nef.to_mesh_data()).transpose()
+        self.0.get(0).map(|n| n.mesh.to_mesh_data()).transpose()
+    }
+}
+
+impl From<Mesh3> for Solid {
+    fn from(mesh: Mesh3) -> Solid {
+        Solid(vec![SolidItem {
+            xform: None,
+            mesh: Arc::new(mesh),
+            anti: false,
+        }])
     }
 }
 

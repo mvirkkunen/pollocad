@@ -23,4 +23,6 @@ fn main() {
     println!("cargo:rerun-if-changed=cpp/wrapper.cpp");
     println!("cargo:rerun-if-changed=cpp/wrapper.h");
     println!("cargo:rustc-link-lib=pollocad_cgal");
+    println!("cargo:rustc-link-lib=gmp");
+    println!("cargo:rustc-link-lib=mpfr");
 }

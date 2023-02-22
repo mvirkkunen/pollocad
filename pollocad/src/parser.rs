@@ -5,7 +5,9 @@ use nom::{
     character::complete::{
         alpha1, alphanumeric1, char, digit1, hex_digit1, line_ending, multispace1, none_of,
     },
-    combinator::{all_consuming, complete, cut, map, map_res, not, opt, recognize, success, value},
+    combinator::{
+        all_consuming, complete, cut, eof, map, map_res, not, opt, recognize, success, value,
+    },
     error::{context, convert_error, VerboseError},
     multi::{fold_many0, many0, many0_count, many1, separated_list0},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
@@ -41,11 +43,21 @@ impl<'a> nom::error::FromExternalError<Span<'a>, String> for ErrorDetail<'a> {
     }
 }
 
+impl<'a> nom::error::ContextError<Span<'a>> for ErrorDetail<'a> {
+    fn add_context(input: Span<'a>, ctx: &'static str, other: Self) -> Self {
+        ErrorDetail(input, format!("Context: {}, {}", ctx, other.0))
+    }
+}
+
 fn ws_or_comment(i: Span) -> Result<&str> {
     value(
         "",
         many0_count(alt((
-            delimited(tag("//"), many0_count(none_of("\r\n")), line_ending),
+            delimited(
+                tag("//"),
+                many0_count(none_of("\r\n")),
+                alt((line_ending, eof)),
+            ),
             delimited(tag("/*"), many0_count(none_of("*/")), tag("*/")),
             value(0, multispace1),
         ))),
@@ -75,10 +87,11 @@ fn node(pos: Range<usize>, expr: Expr) -> Arc<Node> {
 }
 
 fn ident(i: Span) -> Result<Span> {
-    recognize(pair(
+    recognize(tuple((
+        opt(tag("$")),
         alt((alpha1, tag("_"))),
         many0_count(alt((alphanumeric1, tag("_")))),
-    ))(i)
+    )))(i)
 }
 
 fn expr_const(i: Span) -> Result<Arc<Node>> {
@@ -152,7 +165,7 @@ fn expr_call(i: Span) -> Result<Arc<Node>> {
                             Ok(args)
                         },
                     )),
-                    tws(tag(")")),
+                    tws(cut(context("closing paren", tag(")")))),
                 ),
                 alt((map(expr_call, |child| vec![child]), block, success(vec![]))),
             ))),

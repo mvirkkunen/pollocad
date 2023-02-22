@@ -10,10 +10,6 @@ mod bind {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-pub struct Nef3(bind::Nef3Obj);
-
-unsafe impl Send for Nef3 {}
-
 fn protect<R>(f: impl FnOnce(*mut bind::Error) -> R) -> Result<R, String> {
     let mut err: bind::Error = ptr::null_mut();
     let r = f(&mut err as *mut bind::Error);
@@ -28,9 +24,72 @@ fn protect<R>(f: impl FnOnce(*mut bind::Error) -> R) -> Result<R, String> {
     return Ok(r);
 }
 
+pub struct Mesh3(bind::Mesh3Obj);
+
+#[repr(u32)]
+pub enum BooleanOp {
+    Union = bind::BooleanOp_BOOLEAN_OP_UNION as u32,
+    Difference = bind::BooleanOp_BOOLEAN_OP_DIFFERENCE as u32,
+    Intersection = bind::BooleanOp_BOOLEAN_OP_INTERSECTION as u32,
+}
+
+unsafe impl Send for Mesh3 {}
+
+impl Mesh3 {
+    pub fn cube(x: f64, y: f64, z: f64) -> Result<Mesh3, String> {
+        unsafe { protect(|err| bind::mesh3_new_cube(x, y, z, err)).map(Mesh3) }
+    }
+
+    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Mesh3, String> {
+        unimplemented!();
+    }
+
+    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), String> {
+        unsafe { protect(|err| bind::mesh3_transform(self.0, matrix.as_ptr(), err)) }
+    }
+
+    pub fn boolean_op_with(&mut self, other: &Mesh3, op: BooleanOp) -> Result<bool, String> {
+        let mut nef_fallback: u8 = 0;
+
+        unsafe {
+            protect(|err| {
+                bind::mesh3_boolean_op(self.0, other.0, op as u32, &mut nef_fallback, err)
+            })?;
+        }
+
+        Ok(nef_fallback != 0)
+    }
+
+    pub fn to_mesh_data(&self) -> Result<MeshData, String> {
+        unsafe { protect(|err| bind::mesh3_to_mesh_data(self.0, err)).map(MeshData) }
+    }
+}
+
+impl Drop for Mesh3 {
+    fn drop(&mut self) {
+        unsafe {
+            bind::mesh3_free(self.0);
+        }
+    }
+}
+
+impl Clone for Mesh3 {
+    fn clone(&self) -> Self {
+        unsafe { Mesh3(bind::mesh3_clone(self.0)) }
+    }
+}
+
+pub struct Nef3(bind::Nef3Obj);
+
+unsafe impl Send for Nef3 {}
+
 impl Nef3 {
     pub fn cube(x: f64, y: f64, z: f64) -> Result<Nef3, String> {
         unsafe { protect(|err| bind::nef3_new_cube(x, y, z, err)).map(Nef3) }
+    }
+
+    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Nef3, String> {
+        unimplemented!();
     }
 
     pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), String> {

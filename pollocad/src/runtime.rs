@@ -42,6 +42,14 @@ impl CallCtx<'_> {
     fn heavy(&mut self) {
         self.is_heavy = true;
     }
+
+    pub fn pos_num(&self, index: usize, name: &str) -> std::result::Result<Option<f64>, String> {
+        self.pos.get(index).map(|v| v.to_num(name)).transpose()
+    }
+
+    pub fn named_num(&self, name: &str) -> std::result::Result<Option<f64>, String> {
+        self.named.get(name).map(|v| v.to_num(name)).transpose()
+    }
 }
 
 pub trait BuiltinFunc {
@@ -71,6 +79,15 @@ pub enum Value {
     Num(f64),
     BuiltinFunc(Arc<dyn BuiltinFunc>),
     Solid(Arc<Solid>),
+}
+
+impl Value {
+    pub fn to_num(&self, name: &str) -> std::result::Result<f64, String> {
+        match self {
+            Value::Num(n) => Ok(*n),
+            _ => Err(format!("{} must be a number", name)),
+        }
+    }
 }
 
 struct Env {

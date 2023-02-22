@@ -46,6 +46,11 @@ translate(z=-5, y=-5) union() {
 translate(x=-10, y=2, z=2) cube(20, 6, 6);
 "#;
 
+/*const CODE: &'static str = r#"
+cube(10, 10, 10);
+translate(x=2) cube(10, 10, 10);
+"#;*/
+
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Option<Self> {
         let wgpu_render_state = cc.wgpu_render_state.as_ref()?;
