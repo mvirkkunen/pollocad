@@ -9,8 +9,12 @@ use eframe::{
     egui_wgpu::{self, wgpu},
 };
 
+#[rustfmt::skip]
 const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
-    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.0, 0.0, 0.5, 1.0,
 );
 
 pub struct Renderer {
@@ -185,18 +189,27 @@ impl Renderer {
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), egui::Sense::drag());
 
         if rect.size() != self.size && rect.size().x > 0.0 && rect.size().y > 0.0 {
-            let eye = cgmath::Point3::<f32>::new(0.0, 40.0, -40.0);
-            let target = cgmath::Point3::<f32>::new(0.0, 10.0, 0.0);
+            let eye = cgmath::Point3::<f32>::new(0.0, 40.0, 40.0);
+            let target = cgmath::Point3::<f32>::new(0.0, 0.0, 0.0);
             let up = cgmath::Vector3::<f32>::new(0.0, 1.0, 0.0);
 
             let view = cgmath::Matrix4::look_at_rh(eye, target, up);
+
+            let axis = cgmath::Matrix4::<f32>::new(
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, -1.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 1.0
+            );
+
             let proj = cgmath::perspective(
                 cgmath::Deg(80.0),
                 rect.size().x / rect.size().y,
                 0.1,
                 1000.0,
             );
-            self.view_proj = OPENGL_TO_WGPU_MATRIX * proj * view;
+            
+            self.view_proj = OPENGL_TO_WGPU_MATRIX * proj * view * axis;
 
             self.size = rect.size();
         }
