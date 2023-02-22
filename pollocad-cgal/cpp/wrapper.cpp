@@ -20,7 +20,6 @@
 namespace PMP = CGAL::Polygon_mesh_processing;
 
 using Kernel = CGAL::Cartesian<double>;
-//using HKernel = CGAL::Homogeneous<double>;
 using Point_3 = Kernel::Point_3;
 using Vector_3 = Kernel::Vector_3;
 using Plane_3 = CGAL::Plane_3<Kernel>;
@@ -28,56 +27,6 @@ using Aff_transformation_3 = Kernel::Aff_transformation_3;
 using Poly_3 = CGAL::Polyhedron_3<Kernel>;
 using Nef_3 = CGAL::Nef_polyhedron_3<Kernel>;
 using Mesh_3 = CGAL::Surface_mesh<Point_3>;
-
-//using HNef_3 = CGAL::Nef_polyhedron_3<HKernel>;
-
-//const CGAL::Cartesian_converter<HKernel, Kernel> to_kernel;
-
-template <typename HDS>
-class Cube : public CGAL::Modifier_base<HDS> {
-public:
-    double x, y, z;
-    Cube(double x, double y, double z): x(x), y(y), z(z) {}
-    void operator()( HDS& hds) {
-        if (isnan(x) || isnan(y) || isnan(z)) {
-            return;
-        }
-
-        CGAL::Polyhedron_incremental_builder_3<HDS> b{hds, true};
-
-        b.begin_surface(8, 6, 6 * 4);
-
-        b.add_vertex(Point_3{0, 0, 0});
-        b.add_vertex(Point_3{x, 0, 0});
-        b.add_vertex(Point_3{x, y, 0});
-        b.add_vertex(Point_3{0, y, 0});
-        b.add_vertex(Point_3{0, 0, z});
-        b.add_vertex(Point_3{x, 0, z});
-        b.add_vertex(Point_3{x, y, z});
-        b.add_vertex(Point_3{0, y, z});
-
-        std::array<size_t, 6 * 4> indices = {
-            0, 1, 2, 3, // front
-            4, 0, 3, 7, // left
-            5, 4, 7, 6, // back
-            1, 5, 6, 2, // right
-            3, 2, 6, 7, // top
-            4, 5, 1, 0, // bottom
-        };
-
-        b.begin_facet();
-        for (size_t i = 0; i < indices.size(); i++) {
-            if (i % 4 == 0 && i > 0) {
-                b.end_facet();
-                b.begin_facet();
-            }
-            b.add_vertex_to_facet(indices[i]);
-        }
-        b.end_facet();
-
-        b.end_surface();
-    }
-};
 
 char* strdup (const char* s) {
     size_t len = strlen(s);
@@ -108,16 +57,6 @@ extern "C" {
 
 void error_free(Error err) {
     std::free(err);
-}
-
-Nef3Obj nef3_new_cube(double x, double y, double z, Error *err) {
-    return protect<Nef3Obj>(err, [=]() {
-        Poly_3 poly{};
-        Cube<Poly_3::HalfedgeDS> cube{x, y, z};
-        poly.delegate(cube);
-
-        return reinterpret_cast<Nef3Obj>(new Nef_3{poly});
-    });
 }
 
 Nef3Obj nef3_clone(Nef3Obj obj) {
@@ -190,46 +129,6 @@ Mesh3Obj mesh3_new_from_data(
     });
 }
 
-Mesh3Obj mesh3_new_cube(double x, double y, double z, Error *err) {
-    return protect<Mesh3Obj>(err, [=]() {
-        if (isnan(x) || isnan(y) || isnan(z)) {
-            throw std::logic_error("NaN value");
-        }
-
-        auto mesh = new Mesh_3;
-
-        mesh->reserve(8, 12, 6);
-
-        mesh->add_vertex(Point_3{0, 0, 0});
-        mesh->add_vertex(Point_3{x, 0, 0});
-        mesh->add_vertex(Point_3{x, 0, z});
-        mesh->add_vertex(Point_3{0, 0, z});
-        mesh->add_vertex(Point_3{0, y, 0});
-        mesh->add_vertex(Point_3{x, y, 0});
-        mesh->add_vertex(Point_3{x, y, z});
-        mesh->add_vertex(Point_3{0, y, z});
-
-        const std::array<unsigned, 6 * 4> indices = {
-            0, 1, 2, 3, // front
-            4, 0, 3, 7, // left
-            5, 4, 7, 6, // back
-            1, 5, 6, 2, // right
-            3, 2, 6, 7, // top
-            4, 5, 1, 0, // bottom
-        };
-
-        for (size_t i = 0; i < indices.size(); i++) {
-            mesh->add_face(VI{indices[i]}, VI{indices[i + 1]}, VI{indices[i + 2]}, VI{indices[i + 3]});
-        }
-
-        PMP::triangulate_faces(*mesh);
-
-        //PMP::orient(*mesh);
-
-        return reinterpret_cast<Mesh3Obj>(mesh);
-    });
-}
-
 Mesh3Obj mesh3_clone(Mesh3Obj obj) {
     return reinterpret_cast<Mesh3Obj>(new Mesh_3{*reinterpret_cast<Mesh_3 *>(obj)});
 }
@@ -294,8 +193,6 @@ static MeshData *mesh3_to_mesh_data_impl(Mesh_3 &mesh) {
     size_t vertex_len = mesh.number_of_faces() * 3 * 6;
     float *vertex_data = new float[vertex_len];
     float *vp = vertex_data;
-
-
 
     /*fprintf(
         stderr,

@@ -37,23 +37,76 @@ impl Solid {
     }
 
     pub fn cube(x: f64, y: f64, z: f64) -> Result<Solid, Error> {
-        /*#[rustfmt::skip]
-        let vertices = [
-            0, 0, 0,
-            x, 0, 0,
-            x, y, 0,
-            0, y, 0,
-            0, 0, z,
-            x, 0, z,
-            x, y, z,
-            0, y, z,
-        ];*/
+        #[rustfmt::skip]
+        const INDICES: &[u32] = &[
+            0, 1, 3, 1, 2, 3, // front
+            4, 0, 7, 0, 3, 7, // left
+            5, 4, 6, 4, 7, 6, // back
+            1, 5, 2, 5, 6, 2, // right
+            3, 2, 7, 2, 6, 7, // top
+            4, 5, 0, 5, 1, 0, // bottom
+        ];
 
-        Ok(Mesh3::cube(x, y, z)?.into())
+        #[rustfmt::skip]
+        let vertices: &[f64] = &[
+            0.0, 0.0, 0.0,
+            x,   0.0, 0.0,
+            x,   0.0, z,
+            0.0, 0.0, z,
+            0.0, y,   0.0,
+            x,   y,   0.0,
+            x,   y,   z,
+            0.0, y,   z,
+        ];
+
+        Ok(Mesh3::from_data(vertices, INDICES)?.into())
     }
 
     pub fn cylinder(r: f64, h: f64, fn_: u32) -> Result<Solid, Error> {
-        Ok(Mesh3::cylinder(r, h, fn_)?.into())
+        /*let mut indices: Vec<u32> = Vec::with_capacity(10);
+        let mut vertices: Vec<f64> = Vec::with_capacity(10);
+
+        let step = std::f64::consts::PI * 2.0 / f64::from(fn_);
+
+        for i in 0..fn_ {
+            let a = step * f64::from(i);
+            let x = f64::cos(a) * r;
+            let z = f64::sin(a) * r;
+
+            vertices.push(x);
+            vertices.push(0.0);
+            vertices.push(z);
+
+            vertices.push(x);
+            vertices.push(h);
+            vertices.push(z);
+
+            // side
+            indices.push((i * 2) % (fn_ * 2));
+            indices.push((i * 2 + 2) % (fn_ * 2));
+            indices.push((i * 2 + 1) % (fn_ * 2));
+            indices.push((i * 2 + 2) % (fn_ * 2));
+            indices.push((i * 2 + 1) % (fn_ * 2));
+            indices.push((i * 2 + 3) % (fn_ * 2));
+
+            if i < fn_ - 2 {
+                // bottom
+                indices.push(0);
+                indices.push(i * 2 + 4);
+                indices.push(i * 2 + 2);
+
+                // top
+                indices.push(1);
+                indices.push(1 + (i * 2 + 2));
+                indices.push(1 + (i * 2 + 4));
+            }
+        }
+
+        println!("{:?} {:?} {:?}", vertices.len() / 3, indices.len(), indices);
+
+        Ok(Mesh3::from_data(&vertices, &indices)?.into())*/
+
+        unimplemented!();
     }
 
     pub fn anti(&self) -> Solid {
@@ -149,5 +202,3 @@ impl From<Mesh3> for Solid {
         }])
     }
 }
-
-pub struct Polygon;

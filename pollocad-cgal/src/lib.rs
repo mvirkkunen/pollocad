@@ -47,14 +47,6 @@ pub enum BooleanOp {
 unsafe impl Send for Mesh3 {}
 
 impl Mesh3 {
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Mesh3, Error> {
-        unsafe { protect(|err| bind::mesh3_new_cube(x, y, z, err)).map(Mesh3) }
-    }
-
-    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Mesh3, Error> {
-        unimplemented!();
-    }
-
     pub fn from_data(vertices: &[f64], indices: &[u32]) -> Result<Mesh3, Error> {
         unsafe {
             protect(|err| {
@@ -110,14 +102,6 @@ pub struct Nef3(bind::Nef3Obj);
 unsafe impl Send for Nef3 {}
 
 impl Nef3 {
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Nef3, Error> {
-        unsafe { protect(|err| bind::nef3_new_cube(x, y, z, err)).map(Nef3) }
-    }
-
-    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Nef3, Error> {
-        unimplemented!();
-    }
-
     pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), Error> {
         unsafe { protect(|err| bind::nef3_transform(self.0, matrix.as_ptr(), err)) }
     }
