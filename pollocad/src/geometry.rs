@@ -3,6 +3,8 @@ use pollocad_cgal::*;
 use std::borrow::Cow;
 use std::sync::Arc;
 
+pub use pollocad_cgal::Error;
+
 #[derive(Clone)]
 struct SolidItem {
     xform: Option<cgmath::Matrix4<f64>>,
@@ -11,7 +13,7 @@ struct SolidItem {
 }
 
 impl SolidItem {
-    fn xformed_mesh(&self) -> Result<Cow<Mesh3>, String> {
+    fn xformed_mesh(&self) -> Result<Cow<Mesh3>, Error> {
         match self.xform {
             Some(xform) => {
                 let mut clone = (*self.mesh).clone();
@@ -34,11 +36,23 @@ impl Solid {
         }])
     }
 
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Solid, String> {
+    pub fn cube(x: f64, y: f64, z: f64) -> Result<Solid, Error> {
+        /*#[rustfmt::skip]
+        let vertices = [
+            0, 0, 0,
+            x, 0, 0,
+            x, y, 0,
+            0, y, 0,
+            0, 0, z,
+            x, 0, z,
+            x, y, z,
+            0, y, z,
+        ];*/
+
         Ok(Mesh3::cube(x, y, z)?.into())
     }
 
-    pub fn cylinder(r: f64, h: f64, fn_: u32) -> Result<Solid, String> {
+    pub fn cylinder(r: f64, h: f64, fn_: u32) -> Result<Solid, Error> {
         Ok(Mesh3::cylinder(r, h, fn_)?.into())
     }
 
@@ -68,7 +82,7 @@ impl Solid {
         )
     }
 
-    pub fn unionize(&self) -> Result<Solid, String> {
+    pub fn unionize(&self) -> Result<Solid, Error> {
         let (anti, real): (Vec<_>, Vec<_>) = self.0.iter().partition(|i| i.anti);
 
         let Some(first) = real.first() else {
@@ -95,10 +109,10 @@ impl Solid {
         }]))
     }
 
-    pub fn intersectionize<'a>(solids: impl Iterator<Item = &'a Solid>) -> Result<Solid, String> {
+    pub fn intersectionize<'a>(solids: impl Iterator<Item = &'a Solid>) -> Result<Solid, Error> {
         let items = solids
             .map(|s| Ok(s.unionize()?.0[0].mesh.clone()))
-            .collect::<Result<Vec<_>, String>>()?;
+            .collect::<Result<Vec<_>, Error>>()?;
 
         let Some(first) = items.first() else {
             return Ok(Solid(vec![]));
@@ -121,7 +135,7 @@ impl Solid {
         Solid(solids.flat_map(|s| s.0.iter().cloned()).collect())
     }
 
-    pub fn to_mesh_data(&self) -> Result<Option<MeshData>, String> {
+    pub fn to_mesh_data(&self) -> Result<Option<MeshData>, Error> {
         self.0.get(0).map(|n| n.mesh.to_mesh_data()).transpose()
     }
 }

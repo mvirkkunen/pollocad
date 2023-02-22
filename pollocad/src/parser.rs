@@ -6,7 +6,7 @@ use nom::{
         alpha1, alphanumeric1, char, digit1, hex_digit1, line_ending, multispace1, none_of,
     },
     combinator::{
-        all_consuming, complete, cut, eof, map, map_res, not, opt, recognize, success, value,
+        all_consuming, complete, cut, eof, fail, map, map_res, not, opt, recognize, success, value,
     },
     error::{context, convert_error, VerboseError},
     multi::{fold_many0, many0, many0_count, many1, separated_list0},
@@ -231,7 +231,10 @@ fn block_body(i: Span) -> Result<Vec<Arc<Node>>> {
                 terminated(
                     alt((
                         map(
-                            pos(pair(tws(ident), preceded(tws(char('=')), cut(expr)))),
+                            pos(pair(
+                                tws(ident),
+                                preceded(tws(char('=')), context("Missing ; 3", cut(expr))),
+                            )),
                             |(pos, (name, value))| {
                                 node(
                                     pos,
@@ -248,6 +251,7 @@ fn block_body(i: Span) -> Result<Vec<Arc<Node>>> {
                     many1(tws(tag(";"))),
                 ),
                 expr_call,
+                context("Missing ; 2", fail),
             ))),
             opt(expr),
         ),

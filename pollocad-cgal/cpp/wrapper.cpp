@@ -159,7 +159,36 @@ void nef3_free(Nef3Obj obj) {
 
 using VI = Mesh_3::Vertex_index;
 
-Mesh3Obj mesh3_new_from_data(double *verts, size_t num_verts, uint32_t *indexes, size_t num_indexes, Error *err);
+Mesh3Obj mesh3_new_from_data(
+    const double *vertices,
+    uint32_t num_vertices,
+    const uint32_t *indices,
+    uint32_t num_indices,
+    Error *err)
+{
+    return protect<Mesh3Obj>(err, [=]() {
+        auto mesh = new Mesh_3;
+
+        mesh->reserve(num_vertices, num_indices, num_indices / 3);
+
+        for (uint32_t i = 0; i < num_vertices; i += 3) {
+            mesh->add_vertex(Point_3{vertices[i], vertices[i + 1], vertices[i + 2]});
+        }
+
+        for (uint32_t i = 0; i < num_indices; i += 3) {
+            mesh->add_face(
+                Mesh_3::Vertex_index{indices[i]},
+                Mesh_3::Vertex_index{indices[i + 1]},
+                Mesh_3::Vertex_index{indices[i + 2]});
+        }
+
+        //PMP::triangulate_faces(*mesh);
+
+        //PMP::orient(*mesh);
+
+        return reinterpret_cast<Mesh3Obj>(mesh);
+    });
+}
 
 Mesh3Obj mesh3_new_cube(double x, double y, double z, Error *err) {
     return protect<Mesh3Obj>(err, [=]() {
@@ -173,10 +202,10 @@ Mesh3Obj mesh3_new_cube(double x, double y, double z, Error *err) {
 
         mesh->add_vertex(Point_3{0, 0, 0});
         mesh->add_vertex(Point_3{x, 0, 0});
-        mesh->add_vertex(Point_3{x, y, 0});
-        mesh->add_vertex(Point_3{0, y, 0});
-        mesh->add_vertex(Point_3{0, 0, z});
         mesh->add_vertex(Point_3{x, 0, z});
+        mesh->add_vertex(Point_3{0, 0, z});
+        mesh->add_vertex(Point_3{0, y, 0});
+        mesh->add_vertex(Point_3{x, y, 0});
         mesh->add_vertex(Point_3{x, y, z});
         mesh->add_vertex(Point_3{0, y, z});
 
@@ -195,7 +224,7 @@ Mesh3Obj mesh3_new_cube(double x, double y, double z, Error *err) {
 
         PMP::triangulate_faces(*mesh);
 
-        PMP::orient(*mesh);
+        //PMP::orient(*mesh);
 
         return reinterpret_cast<Mesh3Obj>(mesh);
     });
@@ -209,7 +238,13 @@ void mesh3_free(Mesh3Obj obj) {
     delete reinterpret_cast<Mesh_3 *>(obj);
 }
 
-void mesh3_boolean_op(Mesh3Obj obj, Mesh3Obj other, BooleanOp op, uint8_t *nef_fallback, Error *err) {
+void mesh3_boolean_op(
+    Mesh3Obj obj,
+    Mesh3Obj other,
+    BooleanOp op,
+    uint8_t* nef_fallback,
+    Error *err)
+{
     return protect<void>(err, [=]() {
         auto mesh = reinterpret_cast<Mesh_3 *>(obj);
         auto other_mesh = reinterpret_cast<Mesh_3 *>(other);

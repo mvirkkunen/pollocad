@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::ops::*;
 use std::sync::Arc;
 
-use crate::geometry::*;
-use crate::runtime::*;
+use crate::geometry::Solid;
+use crate::runtime::{BuiltinFunc, CallCtx, Value};
 const EPSILON: f64 = 0.001;
 
 trait MapHelpers {
@@ -16,13 +17,34 @@ impl MapHelpers for HashMap<String, Value> {
     }
 }
 
+#[derive(Clone, Debug)]
+struct BuiltinError(String);
+
+impl BuiltinError {
+    fn new(msg: impl ToString) -> Self {
+        BuiltinError(msg.to_string())
+    }
+}
+
+impl std::fmt::Display for BuiltinError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CGAL error: {}", self.0)
+    }
+}
+
+impl std::error::Error for BuiltinError {}
+
+fn err<V>(msg: impl ToString) -> Result<V, Box<dyn Error>> {
+    Err(Box::new(BuiltinError(msg.to_string())))
+}
+
 struct Cube;
 impl BuiltinFunc for Cube {
     fn is_heavy(&self) -> bool {
         true
     }
 
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         let sx = c
             .named_num("x")?
             .or(c.pos_num(0, "x")?)
@@ -53,13 +75,13 @@ impl BuiltinFunc for Cylinder {
         true
     }
 
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         let d = c.named_num("d")?;
         let r = c.named_num("r")?;
         if d.is_some() && r.is_some() {
-            return Err(String::from(
+            return err(
                 "Cannot specify both diameter and radius for cylinder",
-            ));
+            );
         }
         let r = r.or(d.map(|d| d * 0.5)).unwrap_or(1.0).max(EPSILON);
 
@@ -70,14 +92,17 @@ impl BuiltinFunc for Cylinder {
     }
 }
 
-fn map_solid(c: &CallCtx, f: impl FnOnce(Solid) -> Result<Solid, String>) -> Result<Value, String> {
+fn map_solid(
+    c: &CallCtx,
+    f: impl FnOnce(Solid) -> Result<Solid, Box<dyn Error>>,
+) -> Result<Value, Box<dyn Error>> {
     c.children
         .iter()
         .map(|c| match c {
             Value::Solid(s) => Ok(s.as_ref()),
-            _ => Err("Combinators may only have solid values as children".to_string()),
+            _ => err("Combinators may only have solid values as children"),
         })
-        .collect::<Result<Vec<_>, String>>()
+        .collect::<Result<Vec<_>, Box<dyn Error>>>()
         .map(|s| Solid::combine(s.iter().copied()))
         .and_then(f)
         .map(|s| Value::Solid(Arc::new(s)))
@@ -89,8 +114,8 @@ impl BuiltinFunc for Union {
         true
     }
 
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
-        map_solid(c, |s| s.unionize())
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
+        map_solid(c, |s| Ok(s.unionize()?))
     }
 }
 
@@ -100,15 +125,15 @@ impl BuiltinFunc for Intersection {
         true
     }
 
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         let children = c
             .children
             .iter()
             .map(|c| match c {
                 Value::Solid(s) => Ok(s.as_ref()),
-                _ => Err("Combinators may only have solid values as children".to_string()),
+                _ => err("Combinators may only have solid values as children"),
             })
-            .collect::<Result<Vec<_>, String>>()?;
+            .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
 
         Ok(Value::Solid(Arc::new(Solid::intersectionize(
             children.into_iter(),
@@ -118,14 +143,14 @@ impl BuiltinFunc for Intersection {
 
 struct Anti;
 impl BuiltinFunc for Anti {
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         map_solid(c, |s| Ok(s.anti()))
     }
 }
 
 struct Translate;
 impl BuiltinFunc for Translate {
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         let mut coord: [f64; 3] = [0.0, 0.0, 0.0];
 
         for (i, a) in c.pos.iter().enumerate().take(3) {
@@ -153,11 +178,11 @@ impl BuiltinFunc for Translate {
 
 struct NumOp(fn(a: f64, b: f64) -> f64);
 impl BuiltinFunc for NumOp {
-    fn call(&self, c: &mut CallCtx) -> Result<Value, String> {
+    fn call(&self, c: &mut CallCtx) -> Result<Value, Box<dyn Error>> {
         assert!(c.pos.len() == 2);
 
-        let Value::Num(a) = c.pos[0] else { return Err("not a number".to_string()) };
-        let Value::Num(b) = c.pos[1] else { return Err("not a number".to_string()) };
+        let Value::Num(a) = c.pos[0] else { return err("not a number") };
+        let Value::Num(b) = c.pos[1] else { return err("not a number") };
 
         Ok(Value::Num(self.0(a, b)))
     }

@@ -57,7 +57,7 @@ pub trait BuiltinFunc {
         false
     }
 
-    fn call(&self, args: &mut CallCtx) -> std::result::Result<Value, String>;
+    fn call(&self, args: &mut CallCtx) -> std::result::Result<Value, Box<dyn std::error::Error>>;
 }
 
 #[derive(Clone, Debug)]
@@ -199,7 +199,7 @@ fn exec_expr(env: Arc<Env>, node: &Arc<Node>) -> Result {
                 is_heavy: false,
             };
 
-            func.call(&mut args).map_err(|e| err(node, e))
+            func.call(&mut args).map_err(|e| err(node, e.to_string()))
         }
         Expr::Return(node) => exec_expr(env, node),
     }

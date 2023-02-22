@@ -10,14 +10,25 @@ mod bind {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-fn protect<R>(f: impl FnOnce(*mut bind::Error) -> R) -> Result<R, String> {
+#[derive(Clone, Debug)]
+pub struct Error(String);
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CGAL error: {}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}
+
+fn protect<R>(f: impl FnOnce(*mut bind::Error) -> R) -> Result<R, Error> {
     let mut err: bind::Error = ptr::null_mut();
     let r = f(&mut err as *mut bind::Error);
     if !err.is_null() {
         unsafe {
             let err_str = String::from_utf8_lossy(CStr::from_ptr(err).to_bytes()).to_string();
             bind::error_free(err);
-            return Err(err_str);
+            return Err(Error(err_str));
         }
     }
 
@@ -36,19 +47,34 @@ pub enum BooleanOp {
 unsafe impl Send for Mesh3 {}
 
 impl Mesh3 {
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Mesh3, String> {
+    pub fn cube(x: f64, y: f64, z: f64) -> Result<Mesh3, Error> {
         unsafe { protect(|err| bind::mesh3_new_cube(x, y, z, err)).map(Mesh3) }
     }
 
-    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Mesh3, String> {
+    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Mesh3, Error> {
         unimplemented!();
     }
 
-    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), String> {
+    pub fn from_data(vertices: &[f64], indices: &[u32]) -> Result<Mesh3, Error> {
+        unsafe {
+            protect(|err| {
+                bind::mesh3_new_from_data(
+                    vertices.as_ptr(),
+                    vertices.len() as u32,
+                    indices.as_ptr(),
+                    indices.len() as u32,
+                    err,
+                )
+            })
+            .map(Mesh3)
+        }
+    }
+
+    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), Error> {
         unsafe { protect(|err| bind::mesh3_transform(self.0, matrix.as_ptr(), err)) }
     }
 
-    pub fn boolean_op_with(&mut self, other: &Mesh3, op: BooleanOp) -> Result<bool, String> {
+    pub fn boolean_op_with(&mut self, other: &Mesh3, op: BooleanOp) -> Result<bool, Error> {
         let mut nef_fallback: u8 = 0;
 
         unsafe {
@@ -60,7 +86,7 @@ impl Mesh3 {
         Ok(nef_fallback != 0)
     }
 
-    pub fn to_mesh_data(&self) -> Result<MeshData, String> {
+    pub fn to_mesh_data(&self) -> Result<MeshData, Error> {
         unsafe { protect(|err| bind::mesh3_to_mesh_data(self.0, err)).map(MeshData) }
     }
 }
@@ -84,31 +110,31 @@ pub struct Nef3(bind::Nef3Obj);
 unsafe impl Send for Nef3 {}
 
 impl Nef3 {
-    pub fn cube(x: f64, y: f64, z: f64) -> Result<Nef3, String> {
+    pub fn cube(x: f64, y: f64, z: f64) -> Result<Nef3, Error> {
         unsafe { protect(|err| bind::nef3_new_cube(x, y, z, err)).map(Nef3) }
     }
 
-    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Nef3, String> {
+    pub fn cylinder(_r: f64, _h: f64, _fn_: u32) -> Result<Nef3, Error> {
         unimplemented!();
     }
 
-    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), String> {
+    pub fn transform(&mut self, matrix: &[f64; 16]) -> Result<(), Error> {
         unsafe { protect(|err| bind::nef3_transform(self.0, matrix.as_ptr(), err)) }
     }
 
-    pub fn union_with(&mut self, other: &Nef3) -> Result<(), String> {
+    pub fn union_with(&mut self, other: &Nef3) -> Result<(), Error> {
         unsafe { protect(|err| bind::nef3_union(self.0, other.0, err)) }
     }
 
-    pub fn difference_with(&mut self, other: &Nef3) -> Result<(), String> {
+    pub fn difference_with(&mut self, other: &Nef3) -> Result<(), Error> {
         unsafe { protect(|err| bind::nef3_difference(self.0, other.0, err)) }
     }
 
-    pub fn intersection_with(&mut self, other: &Nef3) -> Result<(), String> {
+    pub fn intersection_with(&mut self, other: &Nef3) -> Result<(), Error> {
         unsafe { protect(|err| bind::nef3_intersection(self.0, other.0, err)) }
     }
 
-    pub fn to_mesh_data(&self) -> Result<MeshData, String> {
+    pub fn to_mesh_data(&self) -> Result<MeshData, Error> {
         unsafe { protect(|err| bind::nef3_to_mesh_data(self.0, err)).map(MeshData) }
     }
 }
