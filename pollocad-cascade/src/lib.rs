@@ -73,8 +73,6 @@ impl CascadePreview {
             _ => ptr::null_mut(),
         };
 
-        println!("{:?} {:?}", display, window);
-
         unsafe { protect(|err| bind::cascade_preview_new(display, window, err) ).map(CascadePreview) }
     }
 
@@ -104,6 +102,10 @@ unsafe impl Send for Shape {}
 impl Shape {
     pub fn new_cube(x: f64, y: f64, z: f64) -> Result<Shape> {
         unsafe { protect(|err| bind::cascade_shape_new_box(x, y, z, err)).map(Shape) }
+    }
+
+    pub fn new_cylinder(r: f64, h: f64) -> Result<Shape> {
+        unsafe { protect(|err| bind::cascade_shape_new_cylinder(r, h, err)).map(Shape) }
     }
 
     pub fn transform(&self, matrix: &[f64; 16]) -> Result<Shape> {

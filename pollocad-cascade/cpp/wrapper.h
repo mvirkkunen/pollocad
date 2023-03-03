@@ -35,6 +35,7 @@ void cascade_preview_paint(CascadePreview obj, uint32_t x, uint32_t y,  uint32_t
 void cascade_preview_set_shape(CascadePreview obj, CascadeShape shape, Error *err);
 
 CascadeShape cascade_shape_new_box(double x, double y, double z, Error *err);
+CascadeShape cascade_shape_new_cylinder(double r, double h, Error *err);
 CascadeShape cascade_shape_clone(CascadeShape obj, Error *err);
 CascadeShape cascade_shape_boolean_op(CascadeShape obj, CascadeShape other, BooleanOp op, Error *err);
 CascadeShape cascade_shape_transform(CascadeShape obj, const double *matrix, Error *err);

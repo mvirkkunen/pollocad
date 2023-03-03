@@ -8,8 +8,6 @@
 #include <AIS_ViewCube.hxx>
 #include <AIS_Shape.hxx>
 #include <Aspect_NeutralWindow.hxx>
-#include <BRepPrimAPI_MakeBox.hxx>
-#include <BRepPrimAPI_MakeTorus.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 #include <OpenGl_ArbDbg.hxx>
 #include <OpenGl_Context.hxx>
@@ -105,11 +103,6 @@ public:
 
         interactiveContext->Display(viewCube, false);
 
-        //TopoDS_Shape aBox = BRepPrimAPI_MakeBox(100.0, 50.0, 90.0).Shape();
-        TopoDS_Shape sh = BRepPrimAPI_MakeTorus(100.0, 20.0).Shape();
-        shape = new AIS_Shape{sh};
-        interactiveContext->Display(shape, AIS_Shaded, 0, false);
-
         fbo = new OpenGl_FrameBuffer;
 
         Handle(OpenGl_Texture) colorTexture = new OpenGl_Texture;
@@ -196,7 +189,10 @@ public:
     }
 
     void set_shape(TopoDS_Shape& new_shape) {
-        interactiveContext->Remove(shape, false);
+        if (!shape.IsNull()) {
+            interactiveContext->Remove(shape, false);
+        }
+
         shape = new AIS_Shape{new_shape};
         interactiveContext->Display(shape, AIS_Shaded, 0, false);
     }

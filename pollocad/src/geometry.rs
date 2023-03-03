@@ -28,8 +28,8 @@ impl Solid {
         Ok(Shape::new_cube(x, y, z)?.into())
     }
 
-    pub fn new_cylinder(r: f64, h: f64, fn_: u32) -> Result<Solid, Error> {
-        unimplemented!();
+    pub fn new_cylinder(r: f64, h: f64) -> Result<Solid, Error> {
+        Ok(Shape::new_cylinder(r, h)?.into())
     }
 
     pub fn anti(&self) -> Solid {

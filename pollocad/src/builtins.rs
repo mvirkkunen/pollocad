@@ -83,12 +83,11 @@ impl BuiltinFunc for Cylinder {
                 "Cannot specify both diameter and radius for cylinder",
             );
         }
-        let r = r.or(d.map(|d| d * 0.5)).unwrap_or(1.0).max(EPSILON);
+        let r = r.or(d.map(|d| d * 0.5)).unwrap_or(1.0); //.max(EPSILON);
 
-        let h = c.named_num("h")?.unwrap_or(1.0).max(EPSILON);
-        let fn_ = c.named_num("$fn")?.unwrap_or(10.0).max(3.0).round() as u32;
+        let h = c.named_num("h")?.unwrap_or(1.0); //.max(EPSILON);
 
-        Ok(Value::Solid(Arc::new(Solid::new_cylinder(r, h, fn_)?)))
+        Ok(Value::Solid(Arc::new(Solid::new_cylinder(r, h)?)))
     }
 }
 

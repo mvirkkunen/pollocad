@@ -5,6 +5,7 @@
 #include <BRepBuilderAPI_Copy.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
 
 #include "wrapper.h"
 #include "util.hpp"
@@ -12,6 +13,12 @@
 CascadeShape cascade_shape_new_box(double x, double y, double z, Error *err) {
     return protect<CascadeShape>(err, [=]() {
         return wrap(BRepPrimAPI_MakeBox{x, y, z});
+    });
+}
+
+CascadeShape cascade_shape_new_cylinder(double r, double h, Error *err) {
+    return protect<CascadeShape>(err, [=]() {
+        return wrap(BRepPrimAPI_MakeCylinder{r, h});
     });
 }
 
