@@ -5,7 +5,7 @@ authors = ["Matti Virkkunen <matti@virkkunen.net>"]
 edition = "2021"
 
 [dependencies]
-pollocad-cgal = { path = "../pollocad-cgal" }
+#pollocad-cgal = { path = "../pollocad-cgal" }
 pollocad-cascade = { path = "../pollocad-cascade" }
 
 bytemuck = "1.13"

@@ -7,7 +7,11 @@ fn main() {
         .flag("-std=c++14") // add this
         .include("cpp/")
         .include("/usr/include/opencascade/")
-        .file("cpp/wrapper.cpp")
+        .files(&[
+            "cpp/shape.cpp",
+            "cpp/preview.cpp",
+            "cpp/util.cpp",
+        ])
         .compile("pollocad_cascade");
 
     let bindings = bindgen::Builder::default()
@@ -21,8 +25,11 @@ fn main() {
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 
-    println!("cargo:rerun-if-changed=cpp/wrapper.cpp");
-    println!("cargo:rerun-if-changed=cpp/wrapper.h");
+    println!("cargo:rerun-if-changed=cpp/shape.cpp");
+    println!("cargo:rerun-if-changed=cpp/preview.cpp");
+    println!("cargo:rerun-if-changed=cpp/util.cpp");
+    println!("cargo:rerun-if-changed=cpp/util.hpp");
+    println!("cargo:rustc-link-lib=TKBO");
     println!("cargo:rustc-link-lib=TKBRep");
     println!("cargo:rustc-link-lib=TKernel");
     println!("cargo:rustc-link-lib=TKMath");

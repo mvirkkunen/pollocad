@@ -61,7 +61,7 @@ impl BuiltinFunc for Cube {
             .unwrap_or(1.0)
             .max(EPSILON);
 
-        Ok(Value::Solid(Arc::new(Solid::cube(
+        Ok(Value::Solid(Arc::new(Solid::new_cube(
             sx.max(EPSILON),
             sy.max(EPSILON),
             sz.max(EPSILON),
@@ -88,7 +88,7 @@ impl BuiltinFunc for Cylinder {
         let h = c.named_num("h")?.unwrap_or(1.0).max(EPSILON);
         let fn_ = c.named_num("$fn")?.unwrap_or(10.0).max(3.0).round() as u32;
 
-        Ok(Value::Solid(Arc::new(Solid::cylinder(r, h, fn_)?)))
+        Ok(Value::Solid(Arc::new(Solid::new_cylinder(r, h, fn_)?)))
     }
 }
 

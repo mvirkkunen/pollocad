@@ -1596,7 +1596,6 @@ dependencies = [
  "nom",
  "nom_locate",
  "pollocad-cascade",
- "pollocad-cgal",
  "threadpool",
 ]
 
@@ -1605,16 +1604,9 @@ name = "pollocad-cascade"
 version = "0.1.0"
 dependencies = [
  "bindgen",
+ "bitflags",
  "cc",
  "raw-window-handle",
-]
-
-[[package]]
-name = "pollocad-cgal"
-version = "0.1.0"
-dependencies = [
- "bindgen",
- "cc",
 ]
 
 [[package]]

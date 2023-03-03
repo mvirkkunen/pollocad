@@ -2,5 +2,6 @@
 resolver = "2"
 members = [
     "pollocad",
-    "pollocad-cgal",
+    #"pollocad-cgal",
+    "pollocad-cascade",
 ]
