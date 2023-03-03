@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-// Very haphazardly copy-pasted together from egui/wgpu examples
-
 use std::sync::{Arc, Mutex};
 
 use eframe::egui;
@@ -34,7 +32,6 @@ fn main() -> Result<(), eframe::Error> {
 
 pub struct MyApp {
     code: String,
-    //preview: preview::Renderer,
     preview: Arc<Mutex<pollocad_cascade::CascadePreview>>,
     num_indices: u32,
     num_vertices: u32,
@@ -44,7 +41,7 @@ pub struct MyApp {
 const CODE: &'static str = r#"
 x = 2;
 translate(z=-5, y=-5) union() {
-    cube(x, 30, 20);
+    cube(x, 20, 30);
     translate(z=5, y=5) anti() cube(10, 10, 10);
 }
 
@@ -53,13 +50,10 @@ translate(x=-10, y=2, z=2) cube(20, 6, 6);
 
 impl MyApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Option<Self> {
-        //let wgpu_render_state = cc.wgpu_render_state.as_ref()?;
-
         cc.egui_ctx.set_pixels_per_point(2.0);
 
         Some(Self {
             code: CODE.to_string(),
-            //preview: preview::Renderer::new(wgpu_render_state),
             preview: Arc::new(
                 Mutex::new(
                     CascadePreview::new(&cc.integration_info.window_info).expect("create preview failed"))),
