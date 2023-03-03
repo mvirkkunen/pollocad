@@ -1,4 +1,6 @@
 .vscode/
 target/
 notes.txt
+*.trace
+
 

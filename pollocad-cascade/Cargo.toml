@@ -1,0 +1,12 @@
+[package]
+name = "pollocad-cascade"
+version = "0.1.0"
+edition = "2021"
+links = "pollocad_cascade"
+
+[dependencies]
+raw-window-handle = "0.5"
+
+[build-dependencies]
+bindgen = "0.64"
+cc = "1.0"
