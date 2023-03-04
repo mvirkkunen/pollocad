@@ -6,7 +6,8 @@ edition = "2021"
 
 [dependencies]
 #pollocad-cgal = { path = "../pollocad-cgal" }
-pollocad-cascade = { path = "../pollocad-cascade" }
+#pollocad-cascade = { path = "../pollocad-cascade" }
+pollocad-occt = { path = "../pollocad-occt" }
 
 bytemuck = "1.13"
 cgmath = "0.18"

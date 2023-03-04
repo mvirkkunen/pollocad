@@ -1,9 +1,9 @@
 use cgmath::SquareMatrix as _;
-use pollocad_cascade::*;
+use pollocad_occt::{Shape, BooleanOp};
 use std::borrow::Cow;
 use std::sync::Arc;
 
-pub use pollocad_cascade::Error;
+pub use pollocad_occt::Error;
 
 #[derive(Clone)]
 struct SolidItem {

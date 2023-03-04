@@ -12,7 +12,7 @@ mod parser;
 //mod preview;
 mod runtime;
 
-use pollocad_cascade::{CascadePreview, MouseFlags};
+use pollocad_occt::{CascadePreview, MouseFlags};
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -32,7 +32,7 @@ fn main() -> Result<(), eframe::Error> {
 
 pub struct MyApp {
     code: String,
-    preview: Arc<Mutex<pollocad_cascade::CascadePreview>>,
+    preview: Arc<Mutex<pollocad_occt::CascadePreview>>,
     num_indices: u32,
     num_vertices: u32,
     valid: bool,

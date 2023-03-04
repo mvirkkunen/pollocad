@@ -1,8 +1,8 @@
 [package]
-name = "pollocad-cascade"
+name = "pollocad-occt"
 version = "0.1.0"
 edition = "2021"
-links = "pollocad_cascade"
+links = "occt"
 
 [dependencies]
 bitflags = "1.3"
@@ -10,6 +10,4 @@ cpp = "0.5"
 raw-window-handle = "0.5"
 
 [build-dependencies]
-bindgen = "0.64"
-cc = "1.0"
 cpp_build = "0.5"

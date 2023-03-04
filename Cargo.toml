@@ -4,4 +4,5 @@ members = [
     "pollocad",
     #"pollocad-cgal",
     "pollocad-cascade",
+    "pollocad-occt",
 ]
