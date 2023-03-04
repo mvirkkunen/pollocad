@@ -13,14 +13,14 @@ cpp! {{
 }}
 
 bitflags::bitflags! {
-    pub struct MouseFlags: u32 {
-        const BUTTON_LEFT = (1 << 1);
-        const BUTTON_MIDDLE = (1 << 2);
-        const BUTTON_RIGHT = (1 << 3);
-        const BUTTON_CHANGE = (1 << 4);
-        const MODIFIER_CTRL = (1 << 5);
-        const MODIFIER_SHIFT = (1 << 6);
-        const MODIFIER_ALT = (1 << 7);
+    pub struct MouseFlags: i32 {
+        const BUTTON_LEFT = crate::constants::MouseFlags::Left;
+        const BUTTON_MIDDLE = crate::constants::MouseFlags::Middle;
+        const BUTTON_RIGHT = crate::constants::MouseFlags::Right;
+        const BUTTON_CHANGE = crate::constants::MouseFlags::ButtonChange;
+        const MODIFIER_CTRL = crate::constants::MouseFlags::Ctrl;
+        const MODIFIER_SHIFT = crate::constants::MouseFlags::Shift;
+        const MODIFIER_ALT = crate::constants::MouseFlags::Alt;
     }
 }
 

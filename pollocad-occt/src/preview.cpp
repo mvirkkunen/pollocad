@@ -20,21 +20,7 @@
 #include <V3d_View.hxx>
 #include <V3d_Viewer.hxx>
 
-typedef enum MouseFlags {
-    MOUSE_FLAG_BUTTON_LEFT    = (1 << 1),
-    MOUSE_FLAG_BUTTON_MIDDLE  = (1 << 2),
-    MOUSE_FLAG_BUTTON_RIGHT   = (1 << 3),
-    MOUSE_FLAG_BUTTON_CHANGE  = (1 << 4),
-    MOUSE_FLAG_MODIFIER_SHIFT = (1 << 5),
-    MOUSE_FLAG_MODIFIER_CTRL  = (1 << 6),
-    MOUSE_FLAG_MODIFIER_ALT   = (1 << 7),
-} MouseFlags;
-
-typedef enum BooleanOp {
-    BOOLEAN_OP_UNION = 1,
-    BOOLEAN_OP_DIFFERENCE = 2,
-    BOOLEAN_OP_INTERSECTION = 3,
-} BooleanOp;
+#include "constants.hpp"
 
 void initFBOTextures(Handle(OpenGl_Context) &glContext, const Handle(OpenGl_Texture) &colorTexture, const Handle(OpenGl_Texture) &depthTexture, uint32_t width, uint32_t height) {
     colorTexture->Init(
@@ -193,16 +179,16 @@ public:
         Graphic3d_Vec2i pos{x, y};
 
         Aspect_VKeyMouse vkeymouse = Aspect_VKeyMouse_NONE;
-        if (flags & MOUSE_FLAG_BUTTON_LEFT) vkeymouse |= Aspect_VKeyMouse_LeftButton;
-        if (flags & MOUSE_FLAG_BUTTON_MIDDLE) vkeymouse |= Aspect_VKeyMouse_MiddleButton;
-        if (flags & MOUSE_FLAG_BUTTON_RIGHT) vkeymouse |= Aspect_VKeyMouse_RightButton;
+        if ((int)flags & (int)MouseFlags::Left) vkeymouse |= Aspect_VKeyMouse_LeftButton;
+        if ((int)flags & (int)MouseFlags::Middle) vkeymouse |= Aspect_VKeyMouse_MiddleButton;
+        if ((int)flags & (int)MouseFlags::Right) vkeymouse |= Aspect_VKeyMouse_RightButton;
 
         Aspect_VKeyFlags vkeyflags = Aspect_VKeyFlags_NONE;
-        if (flags & MOUSE_FLAG_MODIFIER_SHIFT) vkeyflags |= Aspect_VKeyFlags_SHIFT;
-        if (flags & MOUSE_FLAG_MODIFIER_CTRL) vkeyflags |= Aspect_VKeyFlags_CTRL;
-        if (flags & MOUSE_FLAG_MODIFIER_ALT) vkeyflags |= Aspect_VKeyFlags_ALT;
+        if ((int)flags & (int)MouseFlags::Shift) vkeyflags |= Aspect_VKeyFlags_SHIFT;
+        if ((int)flags & (int)MouseFlags::Ctrl) vkeyflags |= Aspect_VKeyFlags_CTRL;
+        if ((int)flags & (int)MouseFlags::Alt) vkeyflags |= Aspect_VKeyFlags_ALT;
 
-        if (flags & MOUSE_FLAG_BUTTON_CHANGE) {
+        if ((int)flags & (int)MouseFlags::ButtonChange) {
             UpdateMouseButtons(pos, vkeymouse, vkeyflags, false);
         } else {
             UpdateMousePosition(pos, vkeymouse, vkeyflags, false);

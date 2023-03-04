@@ -10,4 +10,5 @@ cpp = "0.5"
 raw-window-handle = "0.5"
 
 [build-dependencies]
+bindgen = "0.64"
 cpp_build = "0.5"

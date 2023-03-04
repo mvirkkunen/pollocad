@@ -31,11 +31,7 @@ impl CppResult for ShapeResult {
     }
 }
 
-pub enum BooleanOp {
-    Union = 1,
-    Difference = 2,
-    Intersection = 3,
-}
+pub use crate::constants::BooleanOp;
 
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(C)]
@@ -49,10 +45,6 @@ pub struct BoundingBox {
 }
 
 impl Shape {
-    /*pub fn new_empty() -> Shape {
-        cpp!(unsafe [] -> Shape as "TopoDS_Shape" { return TopoDS_Shape{}; })
-    }*/
-
     pub fn new_cube(x: f64, y: f64, z: f64) -> Result<Shape> {
         cpp!(unsafe [x as "double", y as "double", z as "double"] -> ShapeResult as "CppResult<TopoDS_Shape>" {
             return protect<TopoDS_Shape>([=]{ return BRepPrimAPI_MakeBox{x, y, z}; });
@@ -80,17 +72,15 @@ impl Shape {
     }
 
     pub fn boolean_op(&self, other: &Shape, op: BooleanOp) -> Result<Shape> {
-        let op = op as i32;
-
-        cpp!(unsafe [self as "TopoDS_Shape *", other as "TopoDS_Shape *", op as "int"] -> ShapeResult as "CppResult<TopoDS_Shape>" {
+        cpp!(unsafe [self as "TopoDS_Shape *", other as "TopoDS_Shape *", op as "BooleanOp"] -> ShapeResult as "CppResult<TopoDS_Shape>" {
             return protect<TopoDS_Shape>([=] {
                 switch (op) {
                     default:
-                    case BOOLEAN_OP_UNION:
+                    case BooleanOp::Union:
                         return TopoDS_Shape{BRepAlgoAPI_Fuse{*self, *other}};
-                    case BOOLEAN_OP_DIFFERENCE:
+                    case BooleanOp::Difference:
                         return TopoDS_Shape{BRepAlgoAPI_Cut{*self, *other}};
-                    case BOOLEAN_OP_INTERSECTION:
+                    case BooleanOp::Intersection:
                         return TopoDS_Shape{BRepAlgoAPI_Common{*self, *other}};
                 }
             });

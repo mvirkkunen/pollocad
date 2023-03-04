@@ -8,6 +8,8 @@ pub use shape::*;
 mod preview;
 pub use preview::*;
 
+mod constants;
+
 #[derive(Clone, Debug)]
 pub struct Error(String);
 
@@ -28,13 +30,6 @@ trait CppResult: Sized {
         unsafe {
             let mut err: *mut i8 = std::ptr::null_mut();
             let value = self.get(&mut err);
-
-            /*let value = {
-                let err = &mut err;
-                cpp!([value as "CppResult<TopoDS_Shape>", err as "char **"] -> Shape as "TopoDS_Shape" {
-                    return value.get(err);
-                })
-            };*/
 
             if err.is_null() {
                 Ok(value)
