@@ -87,6 +87,10 @@ impl CascadePreview {
     pub fn set_shape(&mut self, shape: &Shape) -> Result<()> {
         unsafe { protect(|err| bind::cascade_preview_set_shape(self.0, shape.0, err)) }
     }
+
+    pub fn has_animation(&self) -> Result<bool> {
+        unsafe { protect(|err| bind::cascade_preview_has_animation(self.0, err)).map(|v| v != 0) }
+    }
 }
 
 impl Drop for CascadePreview {

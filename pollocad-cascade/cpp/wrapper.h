@@ -31,8 +31,9 @@ typedef struct CascadeShape { void* ptr; } CascadeShape;
 CascadePreview cascade_preview_new(void *display_handle, void *window_handle, Error *err);
 void cascade_preview_free(CascadePreview obj);
 void cascade_preview_mouse_event(CascadePreview obj, int32_t x, int32_t y, int32_t wheel, MouseFlags flags, Error *err);
-void cascade_preview_paint(CascadePreview obj, uint32_t x, uint32_t y,  uint32_t width, uint32_t height, Error *err);
+void cascade_preview_paint(CascadePreview obj, uint32_t x, uint32_t y, uint32_t width, uint32_t height, Error *err);
 void cascade_preview_set_shape(CascadePreview obj, CascadeShape shape, Error *err);
+uint32_t cascade_preview_has_animation(CascadePreview obj, Error *err);
 
 CascadeShape cascade_shape_new_box(double x, double y, double z, Error *err);
 CascadeShape cascade_shape_new_cylinder(double r, double h, Error *err);

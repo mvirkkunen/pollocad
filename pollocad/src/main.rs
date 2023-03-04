@@ -133,6 +133,10 @@ impl eframe::App for MyApp {
                                 preview.mouse_event(x, y, wheel, flags).unwrap();
                             }
                         });
+
+                        if preview.has_animation().unwrap_or(false) {
+                            ctx.request_repaint_after(std::time::Duration::from_millis(16));
+                        }
                     }
 
                     let preview = self.preview.clone();
