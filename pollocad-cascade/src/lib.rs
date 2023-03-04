@@ -81,7 +81,7 @@ impl CascadePreview {
     }
 
     pub fn mouse_event(&mut self, x: i32, y: i32, wheel: i32, flags: MouseFlags) -> Result<()> {
-        unsafe { protect(|err| bind::cascade_preview_mouse_event(self.0, x, y, wheel, flags.bits(), err)) }
+        unsafe { protect(|err| bind::cascade_preview_mouse_event(self.0, x, y, wheel, flags.bits() as bind::MouseFlags, err)) }
     }
 
     pub fn set_shape(&mut self, shape: &Shape) -> Result<()> {
@@ -119,7 +119,7 @@ impl Shape {
     pub fn boolean_op(&self, other: &Shape, op: BooleanOp) -> Result<Shape> {
         unsafe {
             protect(|err| {
-                bind::cascade_shape_boolean_op(self.0, other.0, op as u32, err)
+                bind::cascade_shape_boolean_op(self.0, other.0, op as bind::BooleanOp, err)
             }).map(Shape)
         }
     }

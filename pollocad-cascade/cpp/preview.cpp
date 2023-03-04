@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cmath>
 
+#include <AIS_AnimationCamera.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_ViewController.hxx>
 #include <AIS_ViewCube.hxx>
@@ -14,6 +15,7 @@
 #include <OpenGl_GraphicDriver.hxx>
 #include <OpenGl_View.hxx>
 #include <OpenGl_Window.hxx>
+#include <Prs3d_DatumAspect.hxx>
 #include <TopoDS_Shape.hxx>
 #include <V3d_View.hxx>
 #include <V3d_Viewer.hxx>
@@ -144,8 +146,8 @@ public:
     }
 
     void paint(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
-        width = std::max(width, (uint32_t)1);
-        height = std::max(height, (uint32_t)1);
+        width = std::min(std::max((uint32_t)1, width), (uint32_t)4096);
+        height = std::min(std::max((uint32_t)1, height), (uint32_t)4096);
 
         gldebug("POLLO BEGIN paint");
 
