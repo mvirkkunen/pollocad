@@ -54,9 +54,7 @@ impl MyApp {
 
         Some(Self {
             code: CODE.to_string(),
-            preview: Arc::new(
-                Mutex::new(
-                    CascadePreview::new(&cc.integration_info.window_info).expect("create preview failed"))),
+            preview: Arc::new(Mutex::new(CascadePreview::new(&cc).expect("create preview failed"))),
             num_indices: 0,
             num_vertices: 0,
             valid: false,

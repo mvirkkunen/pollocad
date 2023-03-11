@@ -11,7 +11,7 @@ pollocad-occt = { path = "../pollocad-occt" }
 
 bytemuck = "1.13"
 cgmath = "0.18"
-eframe = { git = "https://github.com/mvirkkunen/egui", rev = "1062f591a0227f8608cca67e46b1e3642757aecb" }
+eframe = { git = "https://github.com/mvirkkunen/egui", rev = "a4113c57226ba5ee0904a86aa298971d17f7c13c" }
 #eframe = { version = "0.21" }
 fxhash = "0.2"
 nom = "7.1"

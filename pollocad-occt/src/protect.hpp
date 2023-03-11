@@ -32,28 +32,6 @@ struct CppResult<void> {
     }
 };
 
-/*template<typename T>
-struct CppResult {
-    struct empty{};
-    std::conditional_t<std::is_same_v<T, void>, empty, T> result;
-    char *err;
-
-    ~CppResult() {
-        free(err);
-    }
-
-    template <typename U = T, typename = typename std::enable_if<!std::is_void_v<U>>::type>
-    T get(char **err) const {
-        *err = this->err;
-        return std::move(result);
-    }
-
-    template <typename U = T, typename = typename std::enable_if<std::is_void_v<U>>::type>
-    void get(char **err) const {
-        *err = this->err;
-    }
-};*/
-
 template <typename T>
 CppResult<T> protect(std::function<T()> f) {
     CppResult<T> result;
