@@ -40,7 +40,7 @@ trait CppResult: Sized {
         }
     }
 
-    unsafe fn get(self, err: *mut *mut i8) -> Self::Value;
+    unsafe fn get(&self, err: *mut *mut i8) -> Self::Value;
 }
 
 cpp_class!(unsafe struct VoidResult as "CppResult<void>");
@@ -48,9 +48,9 @@ cpp_class!(unsafe struct VoidResult as "CppResult<void>");
 impl CppResult for VoidResult {
     type Value = ();
 
-    unsafe fn get(self, err: *mut *mut i8) -> Self::Value {
-        cpp!([self as "CppResult<void>", err as "char **"] -> () as "void" {
-            self.get(err);
+    unsafe fn get(&self, err: *mut *mut i8) -> Self::Value {
+        cpp!([self as "CppResult<void> *", err as "char **"] -> () as "void" {
+            self->get(err);
         });
     }
 }
@@ -60,9 +60,9 @@ cpp_class!(unsafe struct BoolResult as "CppResult<bool>");
 impl CppResult for BoolResult {
     type Value = bool;
 
-    unsafe fn get(self, err: *mut *mut i8) -> Self::Value {
-        cpp!([self as "CppResult<bool>", err as "char **"] -> bool as "bool" {
-            return self.get(err);
+    unsafe fn get(&self, err: *mut *mut i8) -> Self::Value {
+        cpp!([self as "CppResult<bool> *", err as "char **"] -> bool as "bool" {
+            return self->get(err);
         })
     }
 }

@@ -24,9 +24,9 @@ cpp_class!(unsafe struct ShapeResult as "CppResult<TopoDS_Shape>");
 impl CppResult for ShapeResult {
     type Value = Shape;
 
-    unsafe fn get(self, err: *mut *mut i8) -> Self::Value {
-        cpp!([self as "CppResult<TopoDS_Shape>", err as "char **"] -> Shape as "TopoDS_Shape" {
-            return self.get(err);
+    unsafe fn get(&self, err: *mut *mut i8) -> Self::Value {
+        cpp!([self as "CppResult<TopoDS_Shape> *", err as "char **"] -> Shape as "TopoDS_Shape" {
+            return self->get(err);
         })
     }
 }
