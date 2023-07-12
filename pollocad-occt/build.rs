@@ -2,11 +2,22 @@ use std::path::PathBuf;
 use std::env;
 
 fn main() {
-    cpp_build::Config::new()
+    let occt_install_path = env::var("OCCT_INSTALL_PATH");
+    
+    let mut build = cpp_build::Config::new();
+
+    build
         .flag_if_supported("-std=c++14")
-        .include("src/")
-        .include("/usr/include/opencascade")
-        .build("src/lib.rs");
+        .include("src/");
+
+    println!("path: {:?}", occt_install_path);
+
+    if let Ok(path) = occt_install_path {
+        build.include(&format!("{}/include/opencascade", path));
+        println!("cargo:rustc-link-search=native={}/lib", path);
+    }
+    
+    build.build("src/lib.rs");
 
     let bindings = bindgen::Builder::default()
         .header("src/constants.hpp")
@@ -22,15 +33,16 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     println!("cargo:rerun-if-changed=src/");
-    println!("cargo:rustc-link-lib=TKBO");
-    println!("cargo:rustc-link-lib=TKBRep");
-    println!("cargo:rustc-link-lib=TKernel");
-    println!("cargo:rustc-link-lib=TKMath");
-    println!("cargo:rustc-link-lib=TKOpenGl");
-    println!("cargo:rustc-link-lib=TKPrim");
-    println!("cargo:rustc-link-lib=TKService");
-    println!("cargo:rustc-link-lib=TKTopAlgo");
-    println!("cargo:rustc-link-lib=TKV3d");
+    println!("cargo:rustc-link-lib=dylib=TKBO");
+    println!("cargo:rustc-link-lib=dylib=TKBRep");
+    println!("cargo:rustc-link-lib=dylib=TKernel");
+    println!("cargo:rustc-link-lib=dylib=TKMath");
+    println!("cargo:rustc-link-lib=dylib=TKOpenGl");
+    println!("cargo:rustc-link-lib=dylib=TKPrim");
+    println!("cargo:rustc-link-lib=dylib=TKService");
+    println!("cargo:rustc-link-lib=dylib=TKTopAlgo");
+    println!("cargo:rustc-link-lib=dylib=TKV3d");
+    println!("cargo:rustc-link-lib=dylib=GL");
 }
 
 // for x in /usr/lib/*TK*.so; do echo $x; nm --dynamic $x|grep y; done|grep -B1 "T "

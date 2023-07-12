@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <iostream>
 
 #include <AIS_AnimationCamera.hxx>
 #include <AIS_InteractiveContext.hxx>
@@ -21,6 +22,8 @@
 #include <V3d_Viewer.hxx>
 
 #include "constants.hpp"
+
+#include <GL/glx.h>
 
 void initFBOTextures(Handle(OpenGl_Context) &glContext, const Handle(OpenGl_Texture) &colorTexture, const Handle(OpenGl_Texture) &depthTexture, uint32_t width, uint32_t height) {
     colorTexture->Init(
@@ -60,7 +63,8 @@ public:
         driver->ChangeOptions().useSystemBuffer = false;
 
         viewer = new V3d_Viewer{driver};
-        viewer->SetDefaultBackgroundColor(Quantity_NOC_GRAY90);
+        //viewer->SetDefaultBackgroundColor(Quantity_NOC_GRAY90);
+        viewer->SetDefaultBackgroundColor(Quantity_NOC_GRAY50);
         viewer->SetDefaultLights();
         viewer->SetLightOn();
         viewer->ActivateGrid(Aspect_GT_Rectangular, Aspect_GDM_Lines);
@@ -71,9 +75,23 @@ public:
         view->SetImmediateUpdate(false);
 
         Handle(OpenGl_Context) initGlContext = new OpenGl_Context;
-        if (!initGlContext->Init(true)) {
+        if (!initGlContext->Init(
+            reinterpret_cast<Aspect_Drawable>(window_handle),
+            reinterpret_cast<Aspect_Display>(display_handle),
+            glXGetCurrentContext(),
+            true))
+        {
             throw std::logic_error{"initGlContext->Init failed\n"};
         }
+
+        gldebug("POLLO WRAP A", initGlContext);
+        fbo = new OpenGl_FrameBuffer;
+        fbo->InitWrapper(initGlContext);
+        gldebug("POLLO WRAP B", initGlContext);
+
+        /*if (!initGlContext->Init(true)) {
+            throw std::logic_error{"initGlContext->Init failed\n"};
+        }*/
 
         //gldebug("POLLO BEGIN initialize", initGlContext);
 
@@ -81,26 +99,28 @@ public:
             throw std::logic_error{"driver->InitContext failed\n"};
         }
 
+        gldebug("POLLO INIT", initGlContext);
+
         window = new Aspect_NeutralWindow;
         window->SetVirtual(true);
         window->SetSize(1, 1);
         window->SetNativeHandle(reinterpret_cast<Aspect_Drawable>(window_handle));
+        //window->SetNativeHandle(initGlContext->Window());
         view->SetWindow(window, initGlContext->RenderingContext());
 
         auto glContext = driver->GetSharedContext();
 
-        fbo = new OpenGl_FrameBuffer;
+        //Handle(OpenGl_Texture) colorTexture = new OpenGl_Texture;
+        //Handle(OpenGl_Texture) depthTexture = new OpenGl_Texture;
+        //initFBOTextures(glContext, colorTexture, depthTexture, 4, 2);
 
-        Handle(OpenGl_Texture) colorTexture = new OpenGl_Texture;
-        Handle(OpenGl_Texture) depthTexture = new OpenGl_Texture;
-        initFBOTextures(glContext, colorTexture, depthTexture, 4, 2);
+        //NCollection_Sequence<Handle(OpenGl_Texture)> colorTextures;
+        //colorTextures.Append(colorTexture);
 
-        NCollection_Sequence<Handle(OpenGl_Texture)> colorTextures;
-        colorTextures.Append(colorTexture);
+        //if (!fbo->InitWrapper(glContext, colorTextures, depthTexture)) {
+        //    throw std::logic_error{"fbo->InitWrapper failed\n"};
+        //}
 
-        if (!fbo->InitWrapper(glContext, colorTextures, depthTexture)) {
-            throw std::logic_error{"fbo->InitWrapper failed\n"};
-        }
 
         glContext->SetDefaultFrameBuffer(fbo);
 
@@ -151,7 +171,7 @@ public:
         window->Size(oldWidth, oldHeight);
 
         if ((int)width != oldWidth || (int)height != oldHeight) {
-            initFBOTextures(glContext, fbo->ColorTexture(0), fbo->DepthStencilTexture(), width, height);
+            //initFBOTextures(glContext, fbo->ColorTexture(0), fbo->DepthStencilTexture(), width, height);
             fbo->ChangeViewport(width, height);
             window->SetSize(width, height);
             view->MustBeResized();
@@ -163,7 +183,7 @@ public:
 
         gldebug("POLLO END paint");
 
-        fbo->UnbindBuffer(glContext);
+        /*fbo->UnbindBuffer(glContext);
         fbo->BindReadBuffer(glContext);
 
         glContext->Functions()->glBlitFramebuffer(
@@ -172,7 +192,7 @@ public:
             GL_COLOR_BUFFER_BIT,
             GL_NEAREST);
 
-        fbo->UnbindBuffer(glContext);
+        fbo->UnbindBuffer(glContext);*/
     }
 
     void mouse_event(int32_t x, int32_t y, int32_t wheel, MouseFlags flags) {
@@ -208,8 +228,8 @@ public:
 
         shape = new AIS_Shape{new_shape};
         shape->Attributes()->SetFaceBoundaryDraw(true);
-        shape->Attributes()->FaceBoundaryAspect()->SetWidth(2.0);
-        shape->Attributes()->FaceBoundaryAspect()->SetTypeOfLine(Aspect_TOL_SOLID);
+        //shape->Attributes()->FaceBoundaryAspect()->SetWidth(2.0);
+        //shape->Attributes()->FaceBoundaryAspect()->SetTypeOfLine(Aspect_TOL_SOLID);
 
         interactiveContext->Display(shape, AIS_Shaded, -1, false);
 
@@ -219,6 +239,8 @@ public:
         }
 
         view->Invalidate();
+
+        std::cout << "set\n";
     }
 
     bool has_animation() {

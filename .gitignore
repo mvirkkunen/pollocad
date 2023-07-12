@@ -1,6 +1,6 @@
+.cargo/
 .vscode/
 target/
 notes.txt
 *.trace
-
 

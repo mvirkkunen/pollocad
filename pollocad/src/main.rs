@@ -1,9 +1,7 @@
-#![allow(dead_code)]
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use std::sync::{Arc, Mutex};
-
-use eframe::egui;
+use gtk::glib;
+use gtk::prelude::*;
+use gtk::glib::clone;
+use gtk::subclass::prelude::ObjectSubclassIsExt;
 
 mod ast;
 mod builtins;
@@ -12,30 +10,68 @@ mod parser;
 //mod preview;
 mod runtime;
 
-use pollocad_occt::{CascadePreview, MouseFlags};
+mod imp;
 
-fn main() -> Result<(), eframe::Error> {
-    let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(1600.0, 800.0)),
-        multisampling: 1,
-        renderer: eframe::Renderer::Glow,
-        depth_buffer: 24,
-        stencil_buffer: 8,
-        ..Default::default()
-    };
-    eframe::run_native(
-        "pollocad",
-        options,
-        Box::new(|cc| Box::new(MyApp::new(cc).unwrap())),
-    )
+glib::wrapper! {
+    pub struct OcctGLArea(ObjectSubclass<imp::OcctGLArea>)
+        @extends gtk::GLArea, gtk::Widget;
 }
 
-pub struct MyApp {
-    code: String,
-    preview: Arc<Mutex<pollocad_occt::CascadePreview>>,
-    num_indices: u32,
-    num_vertices: u32,
-    valid: bool,
+impl OcctGLArea {
+    pub fn new() -> Self {
+        let obj: Self = glib::Object::new();
+        //obj.set_has_depth_buffer(true);
+        //obj.set_has_stencil_buffer(true);
+        obj
+    }
+
+    pub fn set_code(&self, code: &str) {
+        self.imp().set_code(code);
+    }
+}
+
+fn main() -> glib::ExitCode {
+    let application = gtk::Application::builder()
+        .application_id("com.github.gtk-rs.examples.basic")
+        .build();
+    application.connect_activate(build_ui);
+    application.run()
+}
+
+fn build_ui(application: &gtk::Application) {
+    let window = gtk::ApplicationWindow::new(application);
+
+    window.set_title(Some("pollocad"));
+    window.set_default_size(500, 500);
+
+    //let display = window.display();
+
+    //let button = gtk::Button::with_label("Click me!");
+
+    let text = gtk::TextView::new();
+    text.buffer().set_text(CODE);
+    text.set_width_request(300);
+
+    //window.set_child(Some(&button));
+
+    let preview = OcctGLArea::new();
+    preview.set_hexpand(true);
+
+    text.buffer().connect_changed(clone!(@weak text, @weak preview => move |_| {
+        let buf = text.buffer();
+        let text = buf.text(&buf.start_iter(), &buf.end_iter(), true);
+        preview.set_code(&text);
+    }));
+    
+    let layout = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    layout.append(&text);
+    layout.append(&preview);
+
+    window.set_child(Some(&layout));
+    
+    window.present();
+
+    preview.set_code(CODE);
 }
 
 const CODE: &'static str = r#"
@@ -47,110 +83,3 @@ translate(z=-5, y=-5) union() {
 
 translate(x=-10, y=2, z=2) cube(20, 6, 6);
 "#;
-
-impl MyApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Option<Self> {
-        cc.egui_ctx.set_pixels_per_point(2.0);
-
-        Some(Self {
-            code: CODE.to_string(),
-            preview: Arc::new(Mutex::new(CascadePreview::new(&cc).expect("create preview failed"))),
-            num_indices: 0,
-            num_vertices: 0,
-            valid: false,
-        })
-    }
-}
-
-impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::SidePanel::left("code_panel")
-            .resizable(true)
-            .default_width(400.0)
-            .show(ctx, |ui| {
-                ui.with_layout(
-                    egui::Layout::top_down_justified(egui::Align::Min).with_main_justify(true),
-                    |ui| {
-                        let response =
-                            ui.add(egui::TextEdit::multiline(&mut self.code).frame(false));
-
-                        if response.changed() || !self.valid {
-                            self.valid = true;
-                            match parser::parse_source(&self.code) {
-                                Ok((_, body)) => match runtime::exec(body.as_ref()) {
-                                    Ok(runtime::Value::Solid(geo)) => {
-                                        self.preview.lock().unwrap().set_shape(&*geo.get_single_shape().expect("no shape")).expect("set_shape failed");
-                                    }
-                                    Err(e) => {
-                                        eprintln!("Exec error: {:#?}", e);
-                                    }
-                                    _ => {}
-                                },
-                                Err(e) => {
-                                    eprintln!("Parse error: {:#?}", e);
-                                }
-                            }
-                        }
-                    },
-                );
-            });
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Frame::canvas(ui.style())
-                .fill(egui::Color32::WHITE)
-                .show(ui, |ui| {
-
-                    let (rect, response) = ui.allocate_exact_size(ui.available_size(), egui::Sense::click_and_drag());
-                    let ppp = ctx.pixels_per_point();
-
-                    {
-                        let mut preview = self.preview.lock().unwrap();
-
-                        ctx.input(|input| {
-                            let (x, y) = response.hover_pos()
-                                .map(|p| p - rect.left_top())
-                                .map(|p| ((p.x * ppp) as i32, (p.y * ppp) as i32))
-                                .unwrap_or((0, 0));
-
-                            let wheel = if input.scroll_delta.y != 0.0 {
-                                (input.scroll_delta.y * ppp) as i32
-                            } else {
-                                0
-                            };
-
-                            let mut flags = MouseFlags::empty();
-                            flags.set(MouseFlags::BUTTON_CHANGE, input.pointer.any_pressed() || input.pointer.any_released());
-                            flags.set(MouseFlags::BUTTON_LEFT, input.pointer.primary_down());
-                            flags.set(MouseFlags::BUTTON_MIDDLE, input.pointer.middle_down());
-                            flags.set(MouseFlags::BUTTON_RIGHT, input.pointer.secondary_down());
-                            flags.set(MouseFlags::MODIFIER_CTRL, input.modifiers.ctrl);
-                            flags.set(MouseFlags::MODIFIER_SHIFT, input.modifiers.shift);
-                            flags.set(MouseFlags::MODIFIER_ALT, input.modifiers.alt);
-
-                            if input.pointer.is_moving() || wheel != 0 || flags.contains(MouseFlags::BUTTON_CHANGE) {
-                                preview.mouse_event(x, y, wheel, flags).unwrap();
-                            }
-                        });
-
-                        if preview.has_animation().unwrap_or(false) {
-                            ctx.request_repaint_after(std::time::Duration::from_millis(16));
-                        }
-                    }
-
-                    let preview = self.preview.clone();
-
-                    let cb = eframe::egui_glow::CallbackFn::new(move |info, _painter| {
-                        preview.lock().unwrap()
-                            .paint(
-                                (info.viewport.left() * ppp) as u32, (info.viewport.top() * ppp) as u32,
-                                (info.viewport.width() * ppp) as u32, (info.viewport.height() * ppp) as u32).expect("paint failed");
-                    });
-
-                    ui.painter().add(egui::PaintCallback {
-                        rect,
-                        callback: Arc::new(cb),
-                    });
-                });
-        });
-    }
-}

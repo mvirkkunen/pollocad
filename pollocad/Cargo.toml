@@ -5,15 +5,18 @@ authors = ["Matti Virkkunen <matti@virkkunen.net>"]
 edition = "2021"
 
 [dependencies]
-#pollocad-cgal = { path = "../pollocad-cgal" }
-#pollocad-cascade = { path = "../pollocad-cascade" }
 pollocad-occt = { path = "../pollocad-occt" }
 
 bytemuck = "1.13"
 cgmath = "0.18"
-eframe = { git = "https://github.com/mvirkkunen/egui", rev = "a4113c57226ba5ee0904a86aa298971d17f7c13c" }
-#eframe = { version = "0.21" }
 fxhash = "0.2"
 nom = "7.1"
 nom_locate = "4.1"
 threadpool = "1.8"
+gdk4-x11 = { version = "0.6.3", features = ["xlib"] }
+raw-window-handle = "0.5"
+
+[dependencies.gtk]
+package = "gtk4"
+version = "0.6.6"
+features = ["v4_6"]
